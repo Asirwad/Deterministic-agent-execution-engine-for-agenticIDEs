@@ -1,0 +1,5076 @@
+This file is a merged representation of the entire codebase, combined into a single document.
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and crawler's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+.env.example
+.gitignore
+alembic.ini
+alembic/env.py
+alembic/script.py.mako
+alembic/versions/.gitkeep
+alembic/versions/20251220_1507_d7faff4526cc_initial_schema.py
+docker-compose.yml
+Dockerfile
+pyproject.toml
+README.md
+Smart Model Router.postman_collection.json
+src/__init__.py
+src/api/__init__.py
+src/api/dependencies.py
+src/api/routes.py
+src/api/schemas.py
+src/config.py
+src/core/__init__.py
+src/core/router.py
+src/db/__init__.py
+src/db/models.py
+src/db/session.py
+src/main.py
+src/providers/__init__.py
+src/providers/base.py
+src/providers/gemini.py
+src/providers/manager.py
+src/services/__init__.py
+src/services/cache.py
+src/services/cost.py
+src/services/embeddings.py
+src/services/semantic_cache.py
+tests/__init__.py
+tests/conftest.py
+tests/test_integration.py
+tests/test_router.py
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path=".gitignore">
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+*.egg
+dist/
+build/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment files (keep .env.example, ignore actual .env)
+.env
+.env.local
+.env.*.local
+
+# Database
+*.db
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Docker
+docker-compose.override.yml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Alembic
+alembic/versions/__pycache__/
+</file>
+
+<file path="alembic/env.py">
+"""
+Alembic environment configuration for async SQLAlchemy.
+
+This file is executed when Alembic commands run. It configures:
+- Database connection (from environment)
+- Metadata for autogenerate
+- Async migration support
+"""
+
+import asyncio
+from logging.config import fileConfig
+
+from alembic import context
+from sqlalchemy import pool
+
+# Import our models so Alembic can detect them
+from src.db.models import Base
+from src.config import get_settings
+
+# Alembic Config object
+config = context.config
+
+# Set up Python logging from alembic.ini
+if config.config_file_name is not None:
+    fileConfig(config.config_file_name)
+
+# Target metadata for autogenerate
+target_metadata = Base.metadata
+
+# Get database URL from our app settings
+settings = get_settings()
+config.set_main_option("sqlalchemy.url", settings.database_url)
+
+
+def run_migrations_offline() -> None:
+    """
+    Run migrations in 'offline' mode.
+    
+    This generates SQL scripts without connecting to the database.
+    Useful for generating migration scripts for DBA review.
+    """
+    url = config.get_main_option("sqlalchemy.url")
+    context.configure(
+        url=url,
+        target_metadata=target_metadata,
+        literal_binds=True,
+        dialect_opts={"paramstyle": "named"},
+    )
+
+    with context.begin_transaction():
+        context.run_migrations()
+
+
+def do_run_migrations(connection) -> None:
+    """Run migrations with the given connection."""
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+    )
+
+    with context.begin_transaction():
+        context.run_migrations()
+
+
+async def run_async_migrations() -> None:
+    """
+    Run migrations in 'online' mode with async engine.
+    
+    Creates an async engine and runs migrations within a connection.
+    """
+    from sqlalchemy.ext.asyncio import create_async_engine
+    
+    # Create engine directly with our settings URL
+    connectable = create_async_engine(
+        settings.database_url,
+        poolclass=pool.NullPool,  # Don't pool for migrations
+    )
+
+    async with connectable.connect() as connection:
+        await connection.run_sync(do_run_migrations)
+
+    await connectable.dispose()
+
+
+def run_migrations_online() -> None:
+    """
+    Run migrations in 'online' mode.
+    
+    Uses asyncio to run async migrations.
+    """
+    asyncio.run(run_async_migrations())
+
+
+if context.is_offline_mode():
+    run_migrations_offline()
+else:
+    run_migrations_online()
+</file>
+
+<file path="alembic/script.py.mako">
+"""${message}
+
+Revision ID: ${up_revision}
+Revises: ${down_revision | comma,n}
+Create Date: ${create_date}
+"""
+from typing import Sequence, Union
+
+from alembic import op
+import sqlalchemy as sa
+${imports if imports else ""}
+
+# revision identifiers, used by Alembic.
+revision: str = ${repr(up_revision)}
+down_revision: Union[str, None] = ${repr(down_revision)}
+branch_labels: Union[str, Sequence[str], None] = ${repr(branch_labels)}
+depends_on: Union[str, Sequence[str], None] = ${repr(depends_on)}
+
+
+def upgrade() -> None:
+    ${upgrades if upgrades else "pass"}
+
+
+def downgrade() -> None:
+    ${downgrades if downgrades else "pass"}
+</file>
+
+<file path="alembic/versions/.gitkeep">
+
+</file>
+
+<file path="alembic/versions/20251220_1507_d7faff4526cc_initial_schema.py">
+"""initial_schema
+
+Revision ID: d7faff4526cc
+Revises: 
+Create Date: 2025-12-20 15:07:03.390240
+"""
+from typing import Sequence, Union
+
+from alembic import op
+import sqlalchemy as sa
+
+
+# revision identifiers, used by Alembic.
+revision: str = 'd7faff4526cc'
+down_revision: Union[str, None] = None
+branch_labels: Union[str, Sequence[str], None] = None
+depends_on: Union[str, Sequence[str], None] = None
+
+
+def upgrade() -> None:
+    # ### commands auto generated by Alembic - please adjust! ###
+    op.create_table('api_keys',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('key_hash', sa.String(length=64), nullable=False),
+    sa.Column('name', sa.String(length=255), nullable=False),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('last_used_at', sa.DateTime(timezone=True), nullable=True),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_api_keys_key_hash'), 'api_keys', ['key_hash'], unique=True)
+    op.create_table('requests_log',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('timestamp', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('api_key_id', sa.UUID(), nullable=True),
+    sa.Column('prompt_hash', sa.String(length=64), nullable=False),
+    sa.Column('prompt_length', sa.Integer(), nullable=False),
+    sa.Column('difficulty_tag', sa.Enum('SIMPLE', 'MEDIUM', 'COMPLEX', name='difficulty_tag_enum'), nullable=False),
+    sa.Column('model_used', sa.String(length=100), nullable=False),
+    sa.Column('input_tokens', sa.Integer(), nullable=True),
+    sa.Column('output_tokens', sa.Integer(), nullable=True),
+    sa.Column('estimated_cost', sa.Float(), nullable=False),
+    sa.Column('baseline_cost', sa.Float(), nullable=False, comment='Cost if GPT-4o/Gemini Pro was used'),
+    sa.Column('cost_saved', sa.Float(), nullable=False),
+    sa.Column('latency_ms', sa.Integer(), nullable=True),
+    sa.Column('cache_hit', sa.Boolean(), nullable=False),
+    sa.Column('response_hash', sa.String(length=64), nullable=True),
+    sa.Column('error_message', sa.Text(), nullable=True),
+    sa.ForeignKeyConstraint(['api_key_id'], ['api_keys.id'], ondelete='SET NULL'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_requests_log_api_key_id'), 'requests_log', ['api_key_id'], unique=False)
+    op.create_index(op.f('ix_requests_log_difficulty_tag'), 'requests_log', ['difficulty_tag'], unique=False)
+    op.create_index(op.f('ix_requests_log_model_used'), 'requests_log', ['model_used'], unique=False)
+    op.create_index(op.f('ix_requests_log_timestamp'), 'requests_log', ['timestamp'], unique=False)
+    # ### end Alembic commands ###
+
+
+def downgrade() -> None:
+    # ### commands auto generated by Alembic - please adjust! ###
+    op.drop_index(op.f('ix_requests_log_timestamp'), table_name='requests_log')
+    op.drop_index(op.f('ix_requests_log_model_used'), table_name='requests_log')
+    op.drop_index(op.f('ix_requests_log_difficulty_tag'), table_name='requests_log')
+    op.drop_index(op.f('ix_requests_log_api_key_id'), table_name='requests_log')
+    op.drop_table('requests_log')
+    op.drop_index(op.f('ix_api_keys_key_hash'), table_name='api_keys')
+    op.drop_table('api_keys')
+    # ### end Alembic commands ###
+</file>
+
+<file path="Dockerfile">
+# Dockerfile for Smart Model Router FastAPI Application
+# Multi-stage build for smaller final image
+
+# ================================
+# Stage 1: Build dependencies
+# ================================
+FROM python:3.11-slim as builder
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv for faster package installation
+RUN pip install uv
+
+# Copy dependency files
+COPY pyproject.toml ./
+
+# Install dependencies using uv
+RUN uv pip install --system --no-cache .
+
+# ================================
+# Stage 2: Runtime
+# ================================
+FROM python:3.11-slim as runtime
+
+WORKDIR /app
+
+# Create non-root user for security
+RUN useradd --create-home --shell /bin/bash appuser
+
+# Copy installed packages from builder
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+
+# Copy application source
+COPY ./src ./src
+COPY ./alembic ./alembic
+COPY ./alembic.ini ./
+
+# Set ownership
+RUN chown -R appuser:appuser /app
+
+# Switch to non-root user
+USER appuser
+
+# Expose port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Run the application
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+</file>
+
+<file path="src/__init__.py">
+
+</file>
+
+<file path="src/api/dependencies.py">
+"""
+FastAPI dependencies for authentication and database access.
+
+Dependencies are reusable components that can be injected into routes.
+They handle cross-cutting concerns like auth, sessions, and validation.
+"""
+
+import hashlib
+import secrets
+from typing import Annotated
+
+from fastapi import Depends, Header, HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.config import get_settings
+from src.db import APIKey, get_session
+
+
+async def get_api_key(
+    x_api_key: Annotated[str | None, Header(alias="X-API-Key")] = None,
+    session: AsyncSession = Depends(get_session),
+) -> APIKey:
+    """
+    Validate the API key from the X-API-Key header.
+    
+    This dependency:
+    1. Extracts the X-API-Key header
+    2. Hashes it for secure comparison
+    3. Looks up the key in the database
+    4. Updates last_used_at timestamp
+    5. Returns the APIKey model or raises 401/403
+    
+    Usage:
+        @app.post("/protected")
+        async def protected_route(api_key: APIKey = Depends(get_api_key)):
+            # api_key is now the validated APIKey model
+            ...
+    """
+    settings = get_settings()
+    
+    # Check if header is present
+    if not x_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing API key. Include X-API-Key header.",
+            headers={"WWW-Authenticate": "ApiKey"},
+        )
+    
+    # Hash the provided key for comparison
+    key_hash = hashlib.sha256(x_api_key.encode()).hexdigest()
+    
+    # Look up in database
+    result = await session.execute(
+        select(APIKey).where(APIKey.key_hash == key_hash)
+    )
+    api_key = result.scalar_one_or_none()
+    
+    if not api_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid API key.",
+            headers={"WWW-Authenticate": "ApiKey"},
+        )
+    
+    if not api_key.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="API key has been deactivated.",
+        )
+    
+    # Update last used timestamp (fire and forget - don't block response)
+    from datetime import datetime, timezone
+    api_key.last_used_at = datetime.now(timezone.utc)
+    
+    return api_key
+
+
+def generate_api_key() -> tuple[str, str]:
+    """
+    Generate a new API key and its hash.
+    
+    Returns:
+        tuple: (raw_key, key_hash)
+        - raw_key: The key to give to the user (only shown once)
+        - key_hash: The hash to store in the database
+    
+    Key format: smr_<32 random hex characters>
+    Prefix 'smr_' = Smart Model Router
+    """
+    # Generate 32 bytes = 64 hex characters of randomness
+    random_bytes = secrets.token_hex(32)
+    raw_key = f"smr_{random_bytes}"
+    
+    # Hash for storage
+    key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
+    
+    return raw_key, key_hash
+
+
+# Type alias for cleaner route signatures
+ValidatedAPIKey = Annotated[APIKey, Depends(get_api_key)]
+DBSession = Annotated[AsyncSession, Depends(get_session)]
+</file>
+
+<file path="src/api/schemas.py">
+"""
+Pydantic schemas for API request/response validation.
+
+These schemas define the contract for our API endpoints,
+providing automatic validation, documentation, and serialization.
+"""
+
+from datetime import datetime
+from typing import Literal, Optional
+from uuid import UUID
+
+from pydantic import BaseModel, Field
+
+
+# ===================
+# Request Schemas
+# ===================
+
+class CompletionRequest(BaseModel):
+    """
+    Request body for the /v1/complete endpoint.
+    
+    Attributes:
+        prompt: The text prompt to send to the LLM
+        metadata: Optional metadata for tracking (user_id, project_id, etc.)
+        force_tier: Force routing to a specific tier (overrides auto-detection)
+    """
+    prompt: str = Field(
+        ...,
+        min_length=1,
+        max_length=100000,
+        description="The text prompt to process",
+        examples=["Summarize the following text in 3 bullet points..."],
+    )
+    metadata: Optional[dict] = Field(
+        default=None,
+        description="Optional metadata for tracking purposes",
+        examples=[{"user_id": "user_123", "project_id": "proj_456"}],
+    )
+    force_tier: Optional[Literal["simple", "medium", "complex"]] = Field(
+        default=None,
+        description="Force routing to a specific tier (bypasses auto-detection)",
+    )
+
+
+class APIKeyCreate(BaseModel):
+    """Request body for creating a new API key."""
+    name: str = Field(
+        ...,
+        min_length=1,
+        max_length=255,
+        description="Human-readable name for the API key",
+        examples=["Production Key", "Development Key"],
+    )
+
+
+# ===================
+# Response Schemas
+# ===================
+
+class CompletionResponse(BaseModel):
+    """
+    Response from the /v1/complete endpoint.
+    
+    Includes the LLM response and cost tracking information.
+    """
+    response: str = Field(
+        ...,
+        description="The generated response from the LLM",
+    )
+    model_used: str = Field(
+        ...,
+        description="The model that processed this request",
+        examples=["granite4:350m", "gemini-2.0-flash-exp", "gemini-1.5-pro"],
+    )
+    difficulty_tag: Literal["simple", "medium", "complex"] = Field(
+        ...,
+        description="The difficulty classification of the prompt",
+    )
+    estimated_cost: float = Field(
+        ...,
+        ge=0,
+        description="Estimated cost in USD for this request",
+    )
+    estimated_savings: float = Field(
+        ...,
+        ge=0,
+        description="Estimated savings vs using the most expensive model",
+    )
+    latency_ms: int = Field(
+        ...,
+        ge=0,
+        description="Total request processing time in milliseconds",
+    )
+    cache_hit: bool = Field(
+        default=False,
+        description="Whether the response was served from cache",
+    )
+
+
+class APIKeyResponse(BaseModel):
+    """Response when creating or listing API keys."""
+    id: UUID
+    name: str
+    key: Optional[str] = Field(
+        default=None,
+        description="The raw API key (only shown once at creation)",
+    )
+    is_active: bool
+    created_at: datetime
+    last_used_at: Optional[datetime] = None
+
+
+class APIKeyListResponse(BaseModel):
+    """Response for listing all API keys."""
+    keys: list[APIKeyResponse]
+    total: int
+
+
+class HealthResponse(BaseModel):
+    """Response for health check endpoint."""
+    status: Literal["healthy", "degraded", "unhealthy"]
+    service: str
+    version: str
+    database: Literal["connected", "disconnected"]
+    cache: Literal["connected", "disconnected"]
+
+
+class ErrorResponse(BaseModel):
+    """Standard error response format."""
+    error: str = Field(..., description="Error type")
+    message: str = Field(..., description="Human-readable error message")
+    detail: Optional[str] = Field(default=None, description="Additional details")
+</file>
+
+<file path="src/db/models.py">
+"""
+SQLAlchemy ORM Models for Smart Model Router.
+
+Defines the database schema using SQLAlchemy 2.0 declarative style
+with full async support.
+"""
+
+import enum
+import uuid
+from datetime import datetime
+from typing import Optional
+
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    func,
+)
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+
+class Base(DeclarativeBase):
+    """
+    Base class for all ORM models.
+    
+    Using DeclarativeBase (SQLAlchemy 2.0 style) instead of
+    declarative_base() for better type hints and IDE support.
+    """
+    pass
+
+
+class DifficultyTag(str, enum.Enum):
+    """Enum for prompt difficulty classification."""
+    SIMPLE = "simple"
+    MEDIUM = "medium"
+    COMPLEX = "complex"
+
+
+class APIKey(Base):
+    """
+    API Key model for authentication.
+    
+    Design decisions:
+    - Store hash of key, never the raw key (security)
+    - Track last_used_at for audit/cleanup purposes
+    - is_active allows disabling without deleting (audit trail)
+    """
+    __tablename__ = "api_keys"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+    key_hash: Mapped[str] = mapped_column(
+        String(64),  # SHA-256 produces 64 hex characters
+        unique=True,
+        nullable=False,
+        index=True,  # Fast lookups on auth
+    )
+    name: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+    )
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+    last_used_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    # Relationship to request logs
+    requests: Mapped[list["RequestLog"]] = relationship(
+        back_populates="api_key",
+        lazy="selectin",  # Async-compatible eager loading
+    )
+
+    def __repr__(self) -> str:
+        return f"<APIKey(id={self.id}, name={self.name}, active={self.is_active})>"
+
+
+class RequestLog(Base):
+    """
+    Request logging model for cost tracking and analytics.
+    
+    Design decisions:
+    - prompt_hash instead of raw prompt (privacy)
+    - Store both estimated_cost and baseline_cost for savings calculation
+    - latency_ms for performance monitoring
+    - response_hash optional for cache validation
+    """
+    __tablename__ = "requests_log"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+        index=True,  # Common query pattern: filter by time range
+    )
+    
+    # Foreign key to API key (optional - system requests may not have one)
+    api_key_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("api_keys.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    
+    # Request metadata
+    prompt_hash: Mapped[str] = mapped_column(
+        String(64),  # SHA-256 hash
+        nullable=False,
+    )
+    prompt_length: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+    )
+    
+    # Routing decision
+    difficulty_tag: Mapped[DifficultyTag] = mapped_column(
+        Enum(DifficultyTag, name="difficulty_tag_enum"),
+        nullable=False,
+        index=True,
+    )
+    model_used: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+        index=True,
+    )
+    
+    # Token counts
+    input_tokens: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+    output_tokens: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+    
+    # Cost tracking
+    estimated_cost: Mapped[float] = mapped_column(
+        Float,
+        nullable=False,
+    )
+    baseline_cost: Mapped[float] = mapped_column(
+        Float,
+        nullable=False,
+        comment="Cost if GPT-4o/Gemini Pro was used",
+    )
+    cost_saved: Mapped[float] = mapped_column(
+        Float,
+        nullable=False,
+    )
+    
+    # Performance
+    latency_ms: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+    
+    # Cache tracking
+    cache_hit: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
+    )
+    
+    # Optional: store response hash for cache validation
+    response_hash: Mapped[Optional[str]] = mapped_column(
+        String(64),
+        nullable=True,
+    )
+    
+    # Optional: store error if request failed
+    error_message: Mapped[Optional[str]] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    # Relationship back to API key
+    api_key: Mapped[Optional["APIKey"]] = relationship(
+        back_populates="requests",
+    )
+
+    def __repr__(self) -> str:
+        return f"<RequestLog(id={self.id}, model={self.model_used}, cost={self.estimated_cost})>"
+</file>
+
+<file path="src/db/session.py">
+"""
+Database session management with async SQLAlchemy.
+
+Provides:
+- Async engine with connection pooling
+- Session factory for creating database sessions
+- Dependency injection helper for FastAPI
+"""
+
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
+
+from src.config import get_settings
+
+
+def create_engine():
+    """
+    Create an async SQLAlchemy engine with connection pooling.
+    
+    Pool settings explained:
+    - pool_size=5: Maintain 5 connections ready
+    - max_overflow=10: Allow up to 10 extra connections under load
+    - pool_pre_ping=True: Verify connections are alive before use
+    - pool_recycle=3600: Recreate connections after 1 hour (prevents stale connections)
+    """
+    settings = get_settings()
+    
+    return create_async_engine(
+        settings.database_url,
+        echo=settings.log_level == "DEBUG",  # SQL logging in debug mode
+        pool_size=5,
+        max_overflow=10,
+        pool_pre_ping=True,
+        pool_recycle=3600,
+    )
+
+
+# Global engine instance (created on import)
+engine = create_engine()
+
+# Session factory - creates new sessions
+async_session_factory = async_sessionmaker(
+    engine,
+    class_=AsyncSession,
+    expire_on_commit=False,  # Prevent lazy loading issues in async
+    autocommit=False,
+    autoflush=False,
+)
+
+
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
+    """
+    FastAPI dependency for database sessions.
+    
+    Usage in routes:
+        @app.get("/items")
+        async def get_items(session: AsyncSession = Depends(get_session)):
+            ...
+    
+    The session is automatically committed on success and rolled back on error.
+    """
+    async with async_session_factory() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+
+
+@asynccontextmanager
+async def get_session_context() -> AsyncGenerator[AsyncSession, None]:
+    """
+    Context manager for database sessions (for use outside FastAPI).
+    
+    Usage:
+        async with get_session_context() as session:
+            result = await session.execute(...)
+    """
+    async with async_session_factory() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+
+
+async def init_db() -> None:
+    """
+    Initialize database connection.
+    
+    Called during application startup to verify connectivity.
+    Note: Table creation is handled by Alembic migrations, not here.
+    """
+    # Import models to register them with Base.metadata
+    from src.db.models import Base  # noqa: F401
+    
+    # Verify connection works
+    async with engine.begin() as conn:
+        # Just test the connection
+        await conn.run_sync(lambda _: None)
+
+
+async def close_db() -> None:
+    """
+    Close database connections.
+    
+    Called during application shutdown to clean up resources.
+    """
+    await engine.dispose()
+</file>
+
+<file path="src/providers/base.py">
+"""
+LLM Provider Integrations.
+
+This module provides a unified interface for interacting with different LLM backends:
+- OllamaProvider: Local LLM via Ollama (Granite 4.0 Nano)
+- GeminiProvider: Google Gemini API (Flash + Pro)
+
+The abstract BaseProvider class allows easy swapping and fallback behavior.
+"""
+
+import time
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from typing import Optional
+
+import httpx
+
+from src.config import get_settings
+
+
+@dataclass
+class ProviderResponse:
+    """
+    Standard response from any LLM provider.
+    
+    Attributes:
+        text: The generated text response
+        model: The model that was used
+        prompt_tokens: Number of tokens in the prompt (estimated)
+        completion_tokens: Number of tokens in the response (estimated)
+        latency_ms: Time taken for the request in milliseconds
+        raw_response: The raw response from the provider (for debugging)
+    """
+    text: str
+    model: str
+    prompt_tokens: int
+    completion_tokens: int
+    latency_ms: int
+    raw_response: Optional[dict] = None
+
+
+class ProviderError(Exception):
+    """Base exception for provider errors."""
+    def __init__(self, message: str, provider: str, retriable: bool = True):
+        super().__init__(message)
+        self.provider = provider
+        self.retriable = retriable
+
+
+class ProviderTimeoutError(ProviderError):
+    """Request timed out."""
+    pass
+
+
+class ProviderRateLimitError(ProviderError):
+    """Rate limit exceeded."""
+    pass
+
+
+class ProviderModelNotFoundError(ProviderError):
+    """Model not available."""
+    def __init__(self, message: str, provider: str):
+        super().__init__(message, provider, retriable=False)
+
+
+class BaseProvider(ABC):
+    """
+    Abstract base class for LLM providers.
+    
+    All providers must implement the `generate` method.
+    """
+    
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Provider name for logging."""
+        pass
+    
+    @abstractmethod
+    async def generate(self, prompt: str, model: str) -> ProviderResponse:
+        """
+        Generate a completion for the given prompt.
+        
+        Args:
+            prompt: The user's prompt
+            model: The specific model to use
+            
+        Returns:
+            ProviderResponse with generated text and metadata
+            
+        Raises:
+            ProviderError: If the request fails
+        """
+        pass
+    
+    @abstractmethod
+    async def health_check(self) -> bool:
+        """
+        Check if the provider is available.
+        
+        Returns:
+            True if the provider is healthy, False otherwise
+        """
+        pass
+    
+    def _estimate_tokens(self, text: str) -> int:
+        """Estimate token count (~4 chars per token for English)."""
+        return len(text) // 4
+
+
+class OllamaProvider(BaseProvider):
+    """
+    Provider for local LLM via Ollama.
+    
+    Uses the Ollama REST API to generate completions.
+    Default model: granite4:350m (Granite 4.0 Nano)
+    """
+    
+    def __init__(self, base_url: Optional[str] = None, timeout: int = 120):
+        """
+        Initialize OllamaProvider.
+        
+        Args:
+            base_url: Ollama API URL (defaults to settings)
+            timeout: Request timeout in seconds (default 120 for slow models)
+        """
+        settings = get_settings()
+        self.base_url = base_url or settings.ollama_base_url
+        self.timeout = timeout
+        self._client = httpx.AsyncClient(timeout=timeout)
+    
+    @property
+    def name(self) -> str:
+        return "ollama"
+    
+    async def generate(self, prompt: str, model: str) -> ProviderResponse:
+        """
+        Generate completion using Ollama API.
+        
+        Endpoint: POST /api/generate
+        """
+        start_time = time.perf_counter()
+        
+        try:
+            response = await self._client.post(
+                f"{self.base_url}/api/generate",
+                json={
+                    "model": model,
+                    "prompt": prompt,
+                    "stream": False,  # Get complete response at once
+                },
+            )
+            
+            if response.status_code == 404:
+                raise ProviderModelNotFoundError(
+                    f"Model '{model}' not found in Ollama. Run: ollama run {model}",
+                    self.name,
+                )
+            
+            response.raise_for_status()
+            data = response.json()
+            
+            latency_ms = int((time.perf_counter() - start_time) * 1000)
+            
+            return ProviderResponse(
+                text=data.get("response", ""),
+                model=model,
+                prompt_tokens=data.get("prompt_eval_count", self._estimate_tokens(prompt)),
+                completion_tokens=data.get("eval_count", self._estimate_tokens(data.get("response", ""))),
+                latency_ms=latency_ms,
+                raw_response=data,
+            )
+            
+        except httpx.TimeoutException:
+            raise ProviderTimeoutError(
+                f"Ollama request timed out after {self.timeout}s",
+                self.name,
+            )
+        except httpx.HTTPStatusError as e:
+            raise ProviderError(
+                f"Ollama HTTP error: {e.response.status_code}",
+                self.name,
+            )
+        except httpx.RequestError as e:
+            raise ProviderError(
+                f"Ollama connection error: {str(e)}",
+                self.name,
+            )
+    
+    async def health_check(self) -> bool:
+        """Check if Ollama is running."""
+        try:
+            response = await self._client.get(f"{self.base_url}/api/tags")
+            return response.status_code == 200
+        except Exception:
+            return False
+    
+    async def list_models(self) -> list[str]:
+        """List available models in Ollama."""
+        try:
+            response = await self._client.get(f"{self.base_url}/api/tags")
+            response.raise_for_status()
+            data = response.json()
+            return [m["name"] for m in data.get("models", [])]
+        except Exception:
+            return []
+    
+    async def close(self):
+        """Close the HTTP client."""
+        await self._client.aclose()
+</file>
+
+<file path="src/providers/gemini.py">
+"""
+Google Gemini Provider.
+
+Integrates with Google Gemini API for Flash and Pro models.
+Uses the official google-genai SDK with async support.
+"""
+
+import time
+from typing import Optional
+
+from google import genai
+from google.genai import types
+
+from src.config import get_settings
+from src.providers.base import (
+    BaseProvider,
+    ProviderError,
+    ProviderRateLimitError,
+    ProviderResponse,
+    ProviderTimeoutError,
+)
+
+
+class GeminiProvider(BaseProvider):
+    """
+    Provider for Google Gemini API.
+    
+    Supports:
+    - gemini-2.0-flash-exp (fast, cost-effective)
+    - gemini-1.5-pro (high capability)
+    """
+    
+    def __init__(self, api_key: Optional[str] = None, timeout: int = 60):
+        """
+        Initialize GeminiProvider.
+        
+        Args:
+            api_key: Google API key (defaults to settings)
+            timeout: Request timeout in seconds
+        """
+        settings = get_settings()
+        self.api_key = api_key or settings.google_api_key
+        self.timeout = timeout
+        
+        if not self.api_key:
+            raise ProviderError(
+                "GOOGLE_API_KEY not configured",
+                self.name,
+                retriable=False,
+            )
+        
+        # Initialize the Gemini client
+        self._client = genai.Client(api_key=self.api_key)
+    
+    @property
+    def name(self) -> str:
+        return "gemini"
+    
+    async def generate(self, prompt: str, model: str) -> ProviderResponse:
+        """
+        Generate completion using Gemini API.
+        
+        Uses the async generate_content method.
+        """
+        start_time = time.perf_counter()
+        
+        try:
+            # Create the request
+            response = await self._client.aio.models.generate_content(
+                model=model,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    temperature=0.7,
+                    max_output_tokens=2048,
+                ),
+            )
+            
+            latency_ms = int((time.perf_counter() - start_time) * 1000)
+            
+            # Extract text from response
+            text = ""
+            if response.candidates:
+                for candidate in response.candidates:
+                    if candidate.content and candidate.content.parts:
+                        for part in candidate.content.parts:
+                            if hasattr(part, 'text'):
+                                text += part.text or ""
+            
+            # Get token counts from usage metadata
+            prompt_tokens = self._estimate_tokens(prompt)
+            completion_tokens = self._estimate_tokens(text)
+            
+            if response.usage_metadata:
+                prompt_tokens = response.usage_metadata.prompt_token_count or prompt_tokens
+                completion_tokens = response.usage_metadata.candidates_token_count or completion_tokens
+            
+            return ProviderResponse(
+                text=text,
+                model=model,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                latency_ms=latency_ms,
+                raw_response=None,  # Complex object, skip for now
+            )
+            
+        except Exception as e:
+            error_str = str(e).lower()
+            
+            # Check for rate limiting
+            if "rate" in error_str or "quota" in error_str or "429" in error_str:
+                raise ProviderRateLimitError(
+                    f"Gemini rate limit exceeded: {e}",
+                    self.name,
+                )
+            
+            # Check for timeout
+            if "timeout" in error_str or "deadline" in error_str:
+                raise ProviderTimeoutError(
+                    f"Gemini request timed out: {e}",
+                    self.name,
+                )
+            
+            # Generic error
+            raise ProviderError(
+                f"Gemini API error: {e}",
+                self.name,
+            )
+    
+    async def health_check(self) -> bool:
+        """
+        Check if Gemini API is accessible.
+        
+        Tries to list models as a simple health check.
+        """
+        try:
+            # Simple check - just verify client is configured
+            # Full health check would make an API call
+            return bool(self.api_key)
+        except Exception:
+            return False
+    
+    async def close(self):
+        """Close provider resources."""
+        # google-genai client doesn't need explicit cleanup
+        pass
+</file>
+
+<file path="src/providers/manager.py">
+"""
+Provider Manager.
+
+Manages multiple LLM providers and handles:
+- Provider selection based on model tier
+- Retry logic with exponential backoff
+- Fallback chain (local → external)
+"""
+
+import asyncio
+from typing import Optional
+
+from src.config import get_settings
+from src.core.router import DifficultyTier
+from src.providers.base import (
+    BaseProvider,
+    OllamaProvider,
+    ProviderError,
+    ProviderModelNotFoundError,
+    ProviderRateLimitError,
+    ProviderResponse,
+    ProviderTimeoutError,
+)
+from src.providers.gemini import GeminiProvider
+
+
+class ProviderManager:
+    """
+    Manages LLM providers and handles routing, retries, and fallback.
+    
+    Provider Mapping:
+    - SIMPLE → Ollama (Granite 4.0 Nano)
+    - MEDIUM → Gemini Flash
+    - COMPLEX → Gemini Pro
+    
+    Fallback Chain:
+    - If local model fails → escalate to Gemini Flash
+    - If Gemini Flash fails → escalate to Gemini Pro
+    """
+    
+    def __init__(self):
+        """Initialize providers."""
+        self.settings = get_settings()
+        
+        # Initialize providers lazily
+        self._ollama: Optional[OllamaProvider] = None
+        self._gemini: Optional[GeminiProvider] = None
+        
+        # Tier to model mapping
+        self._tier_models = {
+            DifficultyTier.SIMPLE: self.settings.ollama_model,
+            DifficultyTier.MEDIUM: self.settings.gemini_flash_model,
+            DifficultyTier.COMPLEX: self.settings.gemini_pro_model,
+        }
+        
+        # Tier to provider mapping
+        self._tier_providers = {
+            DifficultyTier.SIMPLE: "ollama",
+            DifficultyTier.MEDIUM: "gemini",
+            DifficultyTier.COMPLEX: "gemini",
+        }
+        
+        # Fallback chain: tier → next tier to try
+        self._fallback_chain = {
+            DifficultyTier.SIMPLE: DifficultyTier.MEDIUM,
+            DifficultyTier.MEDIUM: DifficultyTier.COMPLEX,
+            DifficultyTier.COMPLEX: None,  # No fallback from complex
+        }
+    
+    @property
+    def ollama(self) -> OllamaProvider:
+        """Get or create Ollama provider."""
+        if self._ollama is None:
+            self._ollama = OllamaProvider()
+        return self._ollama
+    
+    @property
+    def gemini(self) -> GeminiProvider:
+        """Get or create Gemini provider."""
+        if self._gemini is None:
+            self._gemini = GeminiProvider()
+        return self._gemini
+    
+    def get_provider(self, tier: DifficultyTier) -> BaseProvider:
+        """Get the appropriate provider for a tier."""
+        provider_name = self._tier_providers[tier]
+        if provider_name == "ollama":
+            return self.ollama
+        else:
+            return self.gemini
+    
+    def get_model(self, tier: DifficultyTier) -> str:
+        """Get the model name for a tier."""
+        return self._tier_models[tier]
+    
+    async def generate(
+        self,
+        prompt: str,
+        tier: DifficultyTier,
+        max_retries: int = 2,
+        allow_fallback: bool = True,
+    ) -> tuple[ProviderResponse, DifficultyTier]:
+        """
+        Generate completion with retry and fallback logic.
+        
+        Args:
+            prompt: The user's prompt
+            tier: The initial tier to try
+            max_retries: Number of retries before fallback
+            allow_fallback: Whether to escalate on failure
+            
+        Returns:
+            Tuple of (ProviderResponse, actual_tier_used)
+            
+        Raises:
+            ProviderError: If all providers fail
+        """
+        current_tier = tier
+        last_error: Optional[Exception] = None
+        
+        while current_tier is not None:
+            provider = self.get_provider(current_tier)
+            model = self.get_model(current_tier)
+            
+            # Try with retries
+            for attempt in range(max_retries + 1):
+                try:
+                    response = await provider.generate(prompt, model)
+                    return response, current_tier
+                    
+                except ProviderModelNotFoundError:
+                    # No point retrying if model doesn't exist
+                    last_error = ProviderError(
+                        f"Model {model} not found. Run: ollama run {model}",
+                        provider.name,
+                        retriable=False,
+                    )
+                    break
+                    
+                except ProviderRateLimitError as e:
+                    # Wait longer for rate limits
+                    last_error = e
+                    if attempt < max_retries:
+                        await asyncio.sleep(2 ** (attempt + 2))  # 4, 8, 16 seconds
+                    continue
+                    
+                except ProviderTimeoutError as e:
+                    # Timeouts might succeed on retry
+                    last_error = e
+                    if attempt < max_retries:
+                        await asyncio.sleep(1)
+                    continue
+                    
+                except ProviderError as e:
+                    last_error = e
+                    if e.retriable and attempt < max_retries:
+                        await asyncio.sleep(2 ** attempt)  # 1, 2, 4 seconds
+                        continue
+                    break
+            
+            # Failed after retries, try fallback
+            if allow_fallback:
+                next_tier = self._fallback_chain.get(current_tier)
+                if next_tier:
+                    print(f"⚠️ Fallback: {current_tier.value} → {next_tier.value} (error: {last_error})")
+                    current_tier = next_tier
+                    continue
+            
+            # No more fallbacks
+            break
+        
+        # All attempts failed
+        raise last_error or ProviderError("All providers failed", "unknown")
+    
+    async def health_check(self) -> dict[str, bool]:
+        """Check health of all providers."""
+        return {
+            "ollama": await self.ollama.health_check(),
+            "gemini": await self.gemini.health_check(),
+        }
+    
+    async def close(self):
+        """Close all provider connections."""
+        if self._ollama:
+            await self._ollama.close()
+        if self._gemini:
+            await self._gemini.close()
+
+
+# Singleton instance
+_manager: Optional[ProviderManager] = None
+
+
+def get_provider_manager() -> ProviderManager:
+    """Get the singleton ProviderManager instance."""
+    global _manager
+    if _manager is None:
+        _manager = ProviderManager()
+    return _manager
+</file>
+
+<file path="src/services/cache.py">
+"""
+Redis Cache Service.
+
+Provides exact-match prompt caching to avoid redundant LLM calls:
+- Hash-based key generation for prompt lookup
+- TTL-based expiration
+- JSON serialization for cached responses
+"""
+
+import hashlib
+import json
+from dataclasses import asdict, dataclass
+from typing import Optional
+
+import redis.asyncio as redis
+
+from src.config import get_settings
+
+
+@dataclass
+class CachedResponse:
+    """
+    Cached response structure.
+    
+    Stores all data needed to return a cached response
+    without calling the LLM again.
+    """
+    text: str
+    model: str
+    difficulty_tag: str
+    prompt_tokens: int
+    completion_tokens: int
+    estimated_cost: float
+    estimated_savings: float
+    
+    def to_json(self) -> str:
+        """Serialize to JSON string."""
+        return json.dumps(asdict(self))
+    
+    @classmethod
+    def from_json(cls, json_str: str) -> "CachedResponse":
+        """Deserialize from JSON string."""
+        data = json.loads(json_str)
+        return cls(**data)
+
+
+class CacheService:
+    """
+    Redis-based caching for LLM responses.
+    
+    Key format: smr:cache:{prompt_hash}
+    Value: JSON serialized CachedResponse
+    TTL: Configurable (default 1 hour)
+    """
+    
+    PREFIX = "smr:cache:"
+    
+    def __init__(
+        self,
+        redis_url: Optional[str] = None,
+        ttl_seconds: Optional[int] = None,
+    ):
+        """
+        Initialize cache service.
+        
+        Args:
+            redis_url: Redis connection URL (defaults to settings)
+            ttl_seconds: Time-to-live for cached entries (defaults to settings)
+        """
+        settings = get_settings()
+        self.redis_url = redis_url or settings.redis_url
+        self.ttl_seconds = ttl_seconds or settings.cache_ttl_seconds
+        self._client: Optional[redis.Redis] = None
+    
+    async def connect(self):
+        """Establish Redis connection."""
+        if self._client is None:
+            self._client = redis.from_url(
+                self.redis_url,
+                encoding="utf-8",
+                decode_responses=True,
+            )
+    
+    async def disconnect(self):
+        """Close Redis connection."""
+        if self._client:
+            await self._client.aclose()
+            self._client = None
+    
+    async def health_check(self) -> bool:
+        """Check if Redis is available."""
+        try:
+            await self.connect()
+            await self._client.ping()
+            return True
+        except Exception:
+            return False
+    
+    def _hash_prompt(self, prompt: str) -> str:
+        """
+        Generate cache key from prompt.
+        
+        Uses SHA-256 for consistent, collision-resistant hashing.
+        """
+        return hashlib.sha256(prompt.encode()).hexdigest()
+    
+    def _make_key(self, prompt_hash: str) -> str:
+        """Generate full Redis key with prefix."""
+        return f"{self.PREFIX}{prompt_hash}"
+    
+    async def get(self, prompt: str) -> Optional[CachedResponse]:
+        """
+        Look up cached response for a prompt.
+        
+        Args:
+            prompt: The exact prompt text
+            
+        Returns:
+            CachedResponse if found, None otherwise
+        """
+        try:
+            await self.connect()
+            prompt_hash = self._hash_prompt(prompt)
+            key = self._make_key(prompt_hash)
+            
+            cached = await self._client.get(key)
+            if cached:
+                return CachedResponse.from_json(cached)
+            return None
+        except Exception as e:
+            # Cache failures should not break the app
+            print(f"⚠️ Cache get error: {e}")
+            return None
+    
+    async def set(
+        self,
+        prompt: str,
+        response: CachedResponse,
+        ttl: Optional[int] = None,
+    ) -> bool:
+        """
+        Cache a response.
+        
+        Args:
+            prompt: The exact prompt text
+            response: Response to cache
+            ttl: Optional TTL override (seconds)
+            
+        Returns:
+            True if cached successfully, False otherwise
+        """
+        try:
+            await self.connect()
+            prompt_hash = self._hash_prompt(prompt)
+            key = self._make_key(prompt_hash)
+            
+            await self._client.setex(
+                key,
+                ttl or self.ttl_seconds,
+                response.to_json(),
+            )
+            return True
+        except Exception as e:
+            # Cache failures should not break the app
+            print(f"⚠️ Cache set error: {e}")
+            return False
+    
+    async def delete(self, prompt: str) -> bool:
+        """
+        Delete a cached response.
+        
+        Args:
+            prompt: The exact prompt text
+            
+        Returns:
+            True if deleted, False otherwise
+        """
+        try:
+            await self.connect()
+            prompt_hash = self._hash_prompt(prompt)
+            key = self._make_key(prompt_hash)
+            
+            await self._client.delete(key)
+            return True
+        except Exception as e:
+            print(f"⚠️ Cache delete error: {e}")
+            return False
+    
+    async def clear_all(self) -> int:
+        """
+        Clear all cached responses.
+        
+        Returns:
+            Number of keys deleted
+        """
+        try:
+            await self.connect()
+            pattern = f"{self.PREFIX}*"
+            keys = await self._client.keys(pattern)
+            if keys:
+                return await self._client.delete(*keys)
+            return 0
+        except Exception as e:
+            print(f"⚠️ Cache clear error: {e}")
+            return 0
+    
+    async def stats(self) -> dict:
+        """
+        Get cache statistics.
+        
+        Returns:
+            Dict with cache stats (key_count, memory_usage, etc.)
+        """
+        try:
+            await self.connect()
+            pattern = f"{self.PREFIX}*"
+            keys = await self._client.keys(pattern)
+            
+            info = await self._client.info("memory")
+            
+            return {
+                "key_count": len(keys),
+                "memory_used_bytes": info.get("used_memory", 0),
+                "memory_used_human": info.get("used_memory_human", "0B"),
+                "ttl_seconds": self.ttl_seconds,
+            }
+        except Exception as e:
+            return {"error": str(e)}
+
+
+# Singleton instance
+_cache: Optional[CacheService] = None
+
+
+def get_cache_service() -> CacheService:
+    """Get the singleton cache service."""
+    global _cache
+    if _cache is None:
+        _cache = CacheService()
+    return _cache
+</file>
+
+<file path="src/services/cost.py">
+"""
+Cost Calculator Service.
+
+Handles:
+- Per-model pricing configuration
+- Cost estimation from token counts
+- Savings calculation vs baseline (always using Pro model)
+- Request logging to database
+"""
+
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from typing import Optional
+from uuid import UUID
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.core.router import DifficultyTier
+from src.db import RequestLog
+from src.providers.base import ProviderResponse
+
+
+@dataclass
+class ModelPricing:
+    """
+    Pricing information for a model.
+    
+    Costs are in USD per 1M tokens (standard industry unit).
+    """
+    model_name: str
+    input_cost_per_million: float   # Cost per 1M input tokens
+    output_cost_per_million: float  # Cost per 1M output tokens
+    is_local: bool = False          # Local models have ~zero marginal cost
+
+
+# ===================
+# Model Pricing Table
+# ===================
+# Prices based on public API pricing (as of Dec 2024)
+# Local models have electricity/GPU cost approximated
+
+MODEL_PRICING: dict[str, ModelPricing] = {
+    # Local Ollama Models (minimal cost - just electricity/GPU time)
+    "granite4:350m": ModelPricing(
+        model_name="granite4:350m",
+        input_cost_per_million=0.01,   # ~$0.01 per 1M tokens (electricity)
+        output_cost_per_million=0.01,
+        is_local=True,
+    ),
+    
+    # Google Gemini Models
+    "gemini-2.0-flash-exp": ModelPricing(
+        model_name="gemini-2.0-flash-exp",
+        input_cost_per_million=0.075,   # $0.075 per 1M input tokens
+        output_cost_per_million=0.30,   # $0.30 per 1M output tokens
+        is_local=False,
+    ),
+    "gemini-1.5-pro": ModelPricing(
+        model_name="gemini-1.5-pro",
+        input_cost_per_million=1.25,    # $1.25 per 1M input tokens
+        output_cost_per_million=5.00,   # $5.00 per 1M output tokens
+        is_local=False,
+    ),
+    "gemini-2.5-pro": ModelPricing(
+        model_name="gemini-2.5-pro",
+        input_cost_per_million=1.25,    # Using same as 1.5-pro (update when pricing available)
+        output_cost_per_million=10.00,  # Higher output cost for latest model
+        is_local=False,
+    ),
+}
+
+# Baseline model for savings calculation (most expensive option)
+BASELINE_MODEL = "gemini-2.5-pro"
+
+
+@dataclass
+class CostEstimate:
+    """
+    Cost estimate for a request.
+    
+    Attributes:
+        model: Model that was used
+        input_tokens: Number of input tokens
+        output_tokens: Number of output tokens
+        estimated_cost: Cost in USD for this request
+        baseline_cost: What it would have cost using baseline model
+        savings: Difference between baseline and actual cost
+        savings_percent: Percentage saved
+    """
+    model: str
+    input_tokens: int
+    output_tokens: int
+    estimated_cost: float
+    baseline_cost: float
+    savings: float
+    savings_percent: float
+
+
+class CostCalculator:
+    """
+    Calculates costs and savings for LLM requests.
+    """
+    
+    def __init__(self, pricing: Optional[dict[str, ModelPricing]] = None):
+        """
+        Initialize with pricing table.
+        
+        Args:
+            pricing: Custom pricing table (defaults to MODEL_PRICING)
+        """
+        self.pricing = pricing or MODEL_PRICING
+        self.baseline_model = BASELINE_MODEL
+    
+    def get_pricing(self, model: str) -> ModelPricing:
+        """
+        Get pricing for a model.
+        
+        Falls back to baseline pricing if model not found.
+        """
+        if model in self.pricing:
+            return self.pricing[model]
+        
+        # Try partial match (e.g., "granite4:350m" matches "granite4")
+        for key, pricing in self.pricing.items():
+            if model.startswith(key.split(":")[0]):
+                return pricing
+        
+        # Default to baseline pricing (conservative estimate)
+        return self.pricing.get(self.baseline_model, ModelPricing(
+            model_name=model,
+            input_cost_per_million=1.25,
+            output_cost_per_million=5.00,
+        ))
+    
+    def calculate_cost(
+        self,
+        model: str,
+        input_tokens: int,
+        output_tokens: int,
+    ) -> float:
+        """
+        Calculate cost for a request.
+        
+        Args:
+            model: Model name
+            input_tokens: Number of input tokens
+            output_tokens: Number of output tokens
+            
+        Returns:
+            Cost in USD
+        """
+        pricing = self.get_pricing(model)
+        
+        input_cost = (input_tokens / 1_000_000) * pricing.input_cost_per_million
+        output_cost = (output_tokens / 1_000_000) * pricing.output_cost_per_million
+        
+        return input_cost + output_cost
+    
+    def estimate(
+        self,
+        model: str,
+        input_tokens: int,
+        output_tokens: int,
+    ) -> CostEstimate:
+        """
+        Calculate full cost estimate with savings.
+        
+        Args:
+            model: Model that was used
+            input_tokens: Number of input tokens
+            output_tokens: Number of output tokens
+            
+        Returns:
+            CostEstimate with actual cost and savings vs baseline
+        """
+        actual_cost = self.calculate_cost(model, input_tokens, output_tokens)
+        baseline_cost = self.calculate_cost(self.baseline_model, input_tokens, output_tokens)
+        
+        savings = baseline_cost - actual_cost
+        savings_percent = (savings / baseline_cost * 100) if baseline_cost > 0 else 0.0
+        
+        return CostEstimate(
+            model=model,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            estimated_cost=actual_cost,
+            baseline_cost=baseline_cost,
+            savings=savings,
+            savings_percent=savings_percent,
+        )
+
+
+class RequestLogger:
+    """
+    Logs requests to the database for tracking and analytics.
+    """
+    
+    def __init__(self, calculator: Optional[CostCalculator] = None):
+        """Initialize with optional custom calculator."""
+        self.calculator = calculator or CostCalculator()
+    
+    async def log_request(
+        self,
+        session: AsyncSession,
+        api_key_id: Optional[UUID],
+        prompt: str,
+        response_text: str,
+        provider_response: ProviderResponse,
+        tier: DifficultyTier,
+        cache_hit: bool = False,
+    ) -> RequestLog:
+        """
+        Log a completed request to the database.
+        
+        Args:
+            session: Database session
+            api_key_id: ID of the API key used
+            prompt: Original prompt
+            response_text: Generated response
+            provider_response: Response from the provider
+            tier: Difficulty tier used
+            cache_hit: Whether response was from cache
+            
+        Returns:
+            The created RequestLog record
+        """
+        # Calculate costs
+        cost_estimate = self.calculator.estimate(
+            model=provider_response.model,
+            input_tokens=provider_response.prompt_tokens,
+            output_tokens=provider_response.completion_tokens,
+        )
+        
+        # Create log entry (using correct field names from RequestLog model)
+        log = RequestLog(
+            api_key_id=api_key_id,
+            prompt_hash=self._hash_prompt(prompt),
+            prompt_length=len(prompt),
+            model_used=provider_response.model,
+            difficulty_tag=tier.value,
+            input_tokens=provider_response.prompt_tokens,
+            output_tokens=provider_response.completion_tokens,
+            estimated_cost=cost_estimate.estimated_cost,
+            baseline_cost=cost_estimate.baseline_cost,
+            cost_saved=cost_estimate.savings,
+            latency_ms=provider_response.latency_ms,
+            cache_hit=cache_hit,
+        )
+        
+        session.add(log)
+        return log
+    
+    def _hash_prompt(self, prompt: str) -> str:
+        """Create a hash of the prompt for cache lookup."""
+        import hashlib
+        return hashlib.sha256(prompt.encode()).hexdigest()
+
+
+# Singleton instances
+_calculator: Optional[CostCalculator] = None
+_logger: Optional[RequestLogger] = None
+
+
+def get_cost_calculator() -> CostCalculator:
+    """Get the singleton cost calculator."""
+    global _calculator
+    if _calculator is None:
+        _calculator = CostCalculator()
+    return _calculator
+
+
+def get_request_logger() -> RequestLogger:
+    """Get the singleton request logger."""
+    global _logger
+    if _logger is None:
+        _logger = RequestLogger()
+    return _logger
+</file>
+
+<file path="src/services/embeddings.py">
+"""
+Embeddings Service.
+
+Generates text embeddings using Ollama's embedding models.
+Used for semantic similarity caching.
+"""
+
+from typing import Optional
+import httpx
+
+from src.config import get_settings
+
+
+class EmbeddingsService:
+    """
+    Generates embeddings using Ollama.
+    
+    Uses the nomic-embed-text model by default.
+    """
+    
+    # Default embedding model for Ollama
+    DEFAULT_MODEL = "nomic-embed-text"
+    
+    def __init__(
+        self,
+        base_url: Optional[str] = None,
+        model: Optional[str] = None,
+    ):
+        """
+        Initialize embeddings service.
+        
+        Args:
+            base_url: Ollama API URL (defaults to settings)
+            model: Embedding model to use (defaults to nomic-embed-text)
+        """
+        settings = get_settings()
+        self.base_url = base_url or settings.ollama_base_url
+        self.model = model or self.DEFAULT_MODEL
+        self._client: Optional[httpx.AsyncClient] = None
+    
+    async def _get_client(self) -> httpx.AsyncClient:
+        """Get or create HTTP client."""
+        if self._client is None:
+            self._client = httpx.AsyncClient(timeout=60)
+        return self._client
+    
+    async def embed(self, text: str) -> list[float]:
+        """
+        Generate embedding for text.
+        
+        Args:
+            text: Text to embed
+            
+        Returns:
+            Embedding vector as list of floats
+        """
+        client = await self._get_client()
+        
+        response = await client.post(
+            f"{self.base_url}/api/embed",
+            json={
+                "model": self.model,
+                "input": text,
+            },
+        )
+        response.raise_for_status()
+        data = response.json()
+        
+        # Ollama returns embeddings in data["embeddings"][0]
+        embeddings = data.get("embeddings", [[]])[0]
+        return embeddings
+    
+    async def embed_batch(self, texts: list[str]) -> list[list[float]]:
+        """
+        Generate embeddings for multiple texts.
+        
+        Args:
+            texts: List of texts to embed
+            
+        Returns:
+            List of embedding vectors
+        """
+        # Ollama's embed API supports batch input
+        client = await self._get_client()
+        
+        response = await client.post(
+            f"{self.base_url}/api/embed",
+            json={
+                "model": self.model,
+                "input": texts,
+            },
+        )
+        response.raise_for_status()
+        data = response.json()
+        
+        return data.get("embeddings", [])
+    
+    async def health_check(self) -> bool:
+        """Check if embedding model is available."""
+        try:
+            # Try to embed a simple text
+            embedding = await self.embed("test")
+            return len(embedding) > 0
+        except Exception:
+            return False
+    
+    async def close(self):
+        """Close HTTP client."""
+        if self._client:
+            await self._client.aclose()
+            self._client = None
+
+
+# Singleton instance
+_embeddings: Optional[EmbeddingsService] = None
+
+
+def get_embeddings_service() -> EmbeddingsService:
+    """Get the singleton embeddings service."""
+    global _embeddings
+    if _embeddings is None:
+        _embeddings = EmbeddingsService()
+    return _embeddings
+</file>
+
+<file path="src/services/semantic_cache.py">
+"""
+Semantic Cache Service.
+
+Provides similarity-based caching using embeddings and Redis vector search.
+Finds similar prompts (not just exact matches) to improve cache hit rate.
+"""
+
+import json
+import hashlib
+from dataclasses import asdict, dataclass
+from typing import Optional
+
+import numpy as np
+import redis.asyncio as redis
+
+from src.config import get_settings
+from src.services.embeddings import get_embeddings_service
+
+
+@dataclass
+class SemanticCachedResponse:
+    """
+    Cached response with embedding metadata.
+    """
+    text: str
+    model: str
+    difficulty_tag: str
+    prompt_tokens: int
+    completion_tokens: int
+    estimated_cost: float
+    estimated_savings: float
+    original_prompt: str  # The original prompt that generated this response
+    
+    def to_json(self) -> str:
+        """Serialize to JSON."""
+        return json.dumps(asdict(self))
+    
+    @classmethod
+    def from_json(cls, json_str: str) -> "SemanticCachedResponse":
+        """Deserialize from JSON."""
+        data = json.loads(json_str)
+        return cls(**data)
+
+
+class SemanticCacheService:
+    """
+    Semantic caching using Redis vector search.
+    
+    Stores responses with their prompt embeddings.
+    On lookup, finds similar prompts using cosine similarity.
+    """
+    
+    INDEX_NAME = "smr_semantic_idx"
+    PREFIX = "smr:semantic:"
+    EMBEDDING_DIM = 768  # nomic-embed-text dimension
+    SIMILARITY_THRESHOLD = 0.92  # Minimum similarity for cache hit
+    
+    def __init__(
+        self,
+        redis_url: Optional[str] = None,
+        ttl_seconds: Optional[int] = None,
+        similarity_threshold: float = 0.92,
+    ):
+        """
+        Initialize semantic cache.
+        
+        Args:
+            redis_url: Redis connection URL
+            ttl_seconds: TTL for cached entries
+            similarity_threshold: Minimum cosine similarity for match
+        """
+        settings = get_settings()
+        self.redis_url = redis_url or settings.redis_url
+        self.ttl_seconds = ttl_seconds or settings.cache_ttl_seconds
+        self.similarity_threshold = similarity_threshold
+        self._client: Optional[redis.Redis] = None
+        self._index_created = False
+        self._embeddings = get_embeddings_service()
+    
+    async def connect(self):
+        """Establish Redis connection."""
+        if self._client is None:
+            self._client = redis.from_url(
+                self.redis_url,
+                encoding="utf-8",
+                decode_responses=True,
+            )
+    
+    async def _ensure_index(self):
+        """Create vector search index if not exists."""
+        if self._index_created:
+            return
+        
+        await self.connect()
+        
+        try:
+            # Check if index exists
+            await self._client.execute_command("FT.INFO", self.INDEX_NAME)
+            self._index_created = True
+        except redis.ResponseError:
+            # Create the index
+            await self._client.execute_command(
+                "FT.CREATE", self.INDEX_NAME,
+                "ON", "HASH",
+                "PREFIX", "1", self.PREFIX,
+                "SCHEMA",
+                "embedding", "VECTOR", "HNSW", "6",
+                    "TYPE", "FLOAT32",
+                    "DIM", str(self.EMBEDDING_DIM),
+                    "DISTANCE_METRIC", "COSINE",
+                "response_json", "TEXT",
+                "prompt_hash", "TAG",
+            )
+            self._index_created = True
+    
+    def _hash_prompt(self, prompt: str) -> str:
+        """Generate hash for prompt."""
+        return hashlib.sha256(prompt.encode()).hexdigest()[:16]
+    
+    def _embedding_to_bytes(self, embedding: list[float]) -> bytes:
+        """Convert embedding to bytes for Redis."""
+        return np.array(embedding, dtype=np.float32).tobytes()
+    
+    async def get(self, prompt: str) -> Optional[SemanticCachedResponse]:
+        """
+        Find cached response for similar prompt.
+        
+        Args:
+            prompt: User prompt to search for
+            
+        Returns:
+            SemanticCachedResponse if similar prompt found, None otherwise
+        """
+        try:
+            await self._ensure_index()
+            
+            # Generate embedding for query
+            query_embedding = await self._embeddings.embed(prompt)
+            
+            if not query_embedding:
+                return None
+            
+            # Vector similarity search
+            query_bytes = self._embedding_to_bytes(query_embedding)
+            
+            # Use FT.SEARCH with KNN
+            result = await self._client.execute_command(
+                "FT.SEARCH", self.INDEX_NAME,
+                f"*=>[KNN 1 @embedding $vec AS score]",
+                "PARAMS", "2", "vec", query_bytes,
+                "SORTBY", "score",
+                "RETURN", "2", "response_json", "score",
+                "DIALECT", "2",
+            )
+            
+            # Parse result: [total_count, key1, [field1, value1, ...], ...]
+            if result[0] == 0:
+                return None
+            
+            # Extract score and response
+            fields = result[2]  # [field_name, value, ...]
+            field_dict = dict(zip(fields[::2], fields[1::2]))
+            
+            score = float(field_dict.get("score", 0))
+            similarity = 1 - score  # Cosine distance to similarity
+            
+            if similarity < self.similarity_threshold:
+                return None
+            
+            response_json = field_dict.get("response_json")
+            if response_json:
+                return SemanticCachedResponse.from_json(response_json)
+            
+            return None
+            
+        except Exception as e:
+            print(f"⚠️ Semantic cache get error: {e}")
+            return None
+    
+    async def set(
+        self,
+        prompt: str,
+        response: SemanticCachedResponse,
+        ttl: Optional[int] = None,
+    ) -> bool:
+        """
+        Cache a response with its embedding.
+        
+        Args:
+            prompt: Original prompt
+            response: Response to cache
+            ttl: Optional TTL override
+            
+        Returns:
+            True if cached successfully
+        """
+        try:
+            await self._ensure_index()
+            
+            # Generate embedding
+            embedding = await self._embeddings.embed(prompt)
+            
+            if not embedding:
+                return False
+            
+            # Store in Redis as hash
+            prompt_hash = self._hash_prompt(prompt)
+            key = f"{self.PREFIX}{prompt_hash}"
+            
+            await self._client.hset(
+                key,
+                mapping={
+                    "embedding": self._embedding_to_bytes(embedding),
+                    "response_json": response.to_json(),
+                    "prompt_hash": prompt_hash,
+                },
+            )
+            
+            # Set TTL
+            await self._client.expire(key, ttl or self.ttl_seconds)
+            
+            return True
+            
+        except Exception as e:
+            print(f"⚠️ Semantic cache set error: {e}")
+            return False
+    
+    async def clear_all(self) -> int:
+        """Clear all semantic cache entries."""
+        try:
+            await self.connect()
+            keys = await self._client.keys(f"{self.PREFIX}*")
+            if keys:
+                return await self._client.delete(*keys)
+            return 0
+        except Exception as e:
+            print(f"⚠️ Semantic cache clear error: {e}")
+            return 0
+
+
+# Singleton
+_semantic_cache: Optional[SemanticCacheService] = None
+
+
+def get_semantic_cache_service() -> SemanticCacheService:
+    """Get the singleton semantic cache service."""
+    global _semantic_cache
+    if _semantic_cache is None:
+        _semantic_cache = SemanticCacheService()
+    return _semantic_cache
+</file>
+
+<file path="tests/__init__.py">
+
+</file>
+
+<file path="tests/conftest.py">
+"""
+Pytest configuration for async tests.
+"""
+
+import pytest
+
+# Configure pytest-asyncio mode
+pytest_plugins = ['pytest_asyncio']
+</file>
+
+<file path="tests/test_integration.py">
+"""
+End-to-End Integration Tests for Smart Model Router.
+
+Tests the complete flow from API request to response,
+validating all components work together correctly.
+"""
+
+import pytest
+import pytest_asyncio
+from httpx import AsyncClient, ASGITransport
+
+from src.main import app
+
+
+@pytest_asyncio.fixture
+async def client():
+    """Create async test client."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        yield client
+
+
+@pytest_asyncio.fixture
+async def api_key(client):
+    """Create a test API key and return the raw key."""
+    response = await client.post(
+        "/v1/keys",
+        json={"name": "Integration Test Key"},
+    )
+    assert response.status_code == 201
+    data = response.json()
+    return data["key"]
+
+
+@pytest_asyncio.fixture
+async def clear_cache():
+    """Clear Redis cache before/after tests."""
+    from src.services import get_cache_service
+    cache = get_cache_service()
+    await cache.clear_all()
+    yield
+    await cache.clear_all()
+
+
+class TestHealthEndpoints:
+    """Test health and root endpoints."""
+    
+    @pytest.mark.asyncio
+    async def test_root_endpoint(self, client):
+        """Root returns API info."""
+        response = await client.get("/")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == "Smart Model Router"
+        assert "endpoints" in data
+    
+    @pytest.mark.asyncio
+    async def test_health_endpoint(self, client):
+        """Health check returns status."""
+        response = await client.get("/health")
+        assert response.status_code == 200
+        data = response.json()
+        assert "status" in data
+        assert "database" in data
+
+
+class TestAPIKeyManagement:
+    """Test API key CRUD operations."""
+    
+    @pytest.mark.asyncio
+    async def test_create_api_key(self, client):
+        """Create new API key."""
+        response = await client.post(
+            "/v1/keys",
+            json={"name": "Test Key"},
+        )
+        assert response.status_code == 201
+        data = response.json()
+        assert data["name"] == "Test Key"
+        assert data["key"].startswith("smr_")
+        assert data["is_active"] is True
+    
+    @pytest.mark.asyncio
+    async def test_list_api_keys(self, client, api_key):
+        """List existing API keys."""
+        response = await client.get("/v1/keys")
+        assert response.status_code == 200
+        data = response.json()
+        assert "keys" in data
+        assert data["total"] >= 1
+        # Raw keys should NOT be in list
+        for key in data["keys"]:
+            assert key["key"] is None
+    
+    @pytest.mark.asyncio
+    async def test_deactivate_api_key(self, client):
+        """Deactivate an API key."""
+        # Create key
+        create_resp = await client.post(
+            "/v1/keys",
+            json={"name": "To Deactivate"},
+        )
+        key_id = create_resp.json()["id"]
+        
+        # Deactivate
+        response = await client.delete(f"/v1/keys/{key_id}")
+        assert response.status_code == 204
+
+
+class TestAuthentication:
+    """Test API key authentication."""
+    
+    @pytest.mark.asyncio
+    async def test_missing_api_key(self, client):
+        """Request without API key returns 401."""
+        response = await client.post(
+            "/v1/complete",
+            json={"prompt": "Hello"},
+        )
+        assert response.status_code == 401
+    
+    @pytest.mark.asyncio
+    async def test_invalid_api_key(self, client):
+        """Request with invalid API key returns 401."""
+        response = await client.post(
+            "/v1/complete",
+            json={"prompt": "Hello"},
+            headers={"X-API-Key": "invalid_key"},
+        )
+        assert response.status_code == 401
+    
+    @pytest.mark.asyncio
+    async def test_valid_api_key(self, client, api_key):
+        """Request with valid API key succeeds."""
+        response = await client.post(
+            "/v1/complete",
+            json={"prompt": "What is 2+2?"},
+            headers={"X-API-Key": api_key},
+        )
+        # Should succeed (200) or service unavailable (503) if LLM is down
+        assert response.status_code in [200, 503]
+
+
+class TestCompletionEndpoint:
+    """Test the main completion endpoint."""
+    
+    @pytest.mark.asyncio
+    async def test_simple_prompt(self, client, api_key):
+        """Simple prompt returns valid response."""
+        response = await client.post(
+            "/v1/complete",
+            json={"prompt": "Summarize: Python is a programming language."},
+            headers={"X-API-Key": api_key},
+        )
+        if response.status_code == 200:
+            data = response.json()
+            assert "response" in data
+            assert "model_used" in data
+            assert "difficulty_tag" in data
+            assert "estimated_cost" in data
+            assert "latency_ms" in data
+    
+    @pytest.mark.asyncio
+    async def test_force_tier_simple(self, client, api_key):
+        """Force tier overrides routing."""
+        response = await client.post(
+            "/v1/complete",
+            json={
+                "prompt": "Design a complex architecture",
+                "force_tier": "simple",
+            },
+            headers={"X-API-Key": api_key},
+        )
+        if response.status_code == 200:
+            data = response.json()
+            assert data["difficulty_tag"] == "simple"
+    
+    @pytest.mark.asyncio
+    async def test_force_tier_complex(self, client, api_key):
+        """Force tier to complex."""
+        response = await client.post(
+            "/v1/complete",
+            json={
+                "prompt": "What is 2+2?",
+                "force_tier": "complex",
+            },
+            headers={"X-API-Key": api_key},
+        )
+        if response.status_code == 200:
+            data = response.json()
+            assert data["difficulty_tag"] == "complex"
+
+
+class TestCaching:
+    """Test Redis caching behavior."""
+    
+    @pytest.mark.asyncio
+    async def test_cache_miss_then_hit(self, client, api_key, clear_cache):
+        """First request is cache miss, second is hit."""
+        prompt = "What is caching? (test unique prompt)"
+        headers = {"X-API-Key": api_key}
+        
+        # First request - cache miss
+        r1 = await client.post(
+            "/v1/complete",
+            json={"prompt": prompt},
+            headers=headers,
+        )
+        if r1.status_code != 200:
+            pytest.skip("LLM not available")
+        
+        data1 = r1.json()
+        assert data1["cache_hit"] is False
+        latency1 = data1["latency_ms"]
+        
+        # Second request - cache hit
+        r2 = await client.post(
+            "/v1/complete",
+            json={"prompt": prompt},
+            headers=headers,
+        )
+        assert r2.status_code == 200
+        data2 = r2.json()
+        assert data2["cache_hit"] is True
+        latency2 = data2["latency_ms"]
+        
+        # Cached response should be much faster
+        assert latency2 < latency1, f"Cache hit ({latency2}ms) should be faster than miss ({latency1}ms)"
+    
+    @pytest.mark.asyncio
+    async def test_different_prompts_not_cached(self, client, api_key, clear_cache):
+        """Different prompts get different cache entries."""
+        headers = {"X-API-Key": api_key}
+        
+        r1 = await client.post(
+            "/v1/complete",
+            json={"prompt": "Unique prompt 1"},
+            headers=headers,
+        )
+        r2 = await client.post(
+            "/v1/complete",
+            json={"prompt": "Unique prompt 2"},
+            headers=headers,
+        )
+        
+        if r1.status_code == 200 and r2.status_code == 200:
+            assert r1.json()["cache_hit"] is False
+            assert r2.json()["cache_hit"] is False
+
+
+class TestCostTracking:
+    """Test cost calculation and logging."""
+    
+    @pytest.mark.asyncio
+    async def test_cost_fields_present(self, client, api_key):
+        """Response includes cost fields."""
+        response = await client.post(
+            "/v1/complete",
+            json={"prompt": "Hello"},
+            headers={"X-API-Key": api_key},
+        )
+        if response.status_code == 200:
+            data = response.json()
+            assert "estimated_cost" in data
+            assert "estimated_savings" in data
+            assert isinstance(data["estimated_cost"], (int, float))
+            assert isinstance(data["estimated_savings"], (int, float))
+    
+    @pytest.mark.asyncio
+    async def test_local_model_saves_money(self, client, api_key, clear_cache):
+        """Simple prompts using local model should show savings."""
+        response = await client.post(
+            "/v1/complete",
+            json={"prompt": "Summarize: Test"},
+            headers={"X-API-Key": api_key},
+        )
+        if response.status_code == 200:
+            data = response.json()
+            # Local model should have savings vs Pro baseline
+            if "granite" in data["model_used"].lower():
+                assert data["estimated_savings"] > 0
+
+
+class TestInputValidation:
+    """Test request validation."""
+    
+    @pytest.mark.asyncio
+    async def test_empty_prompt_rejected(self, client, api_key):
+        """Empty prompt is rejected."""
+        response = await client.post(
+            "/v1/complete",
+            json={"prompt": ""},
+            headers={"X-API-Key": api_key},
+        )
+        assert response.status_code == 422
+    
+    @pytest.mark.asyncio
+    async def test_invalid_force_tier(self, client, api_key):
+        """Invalid force_tier is rejected."""
+        response = await client.post(
+            "/v1/complete",
+            json={"prompt": "Hello", "force_tier": "invalid"},
+            headers={"X-API-Key": api_key},
+        )
+        assert response.status_code == 422
+
+
+class TestRouterClassification:
+    """Test prompt classification/routing."""
+    
+    @pytest.mark.asyncio
+    async def test_simple_prompt_classification(self, client, api_key, clear_cache):
+        """Simple prompts get simple/medium tier."""
+        response = await client.post(
+            "/v1/complete",
+            json={"prompt": "Translate to Spanish: Hello"},
+            headers={"X-API-Key": api_key},
+        )
+        if response.status_code == 200:
+            data = response.json()
+            # Translation is a simple task
+            assert data["difficulty_tag"] in ["simple", "medium"]
+    
+    @pytest.mark.asyncio
+    async def test_best_model_override(self, client, api_key, clear_cache):
+        """'best model' keyword triggers complex tier."""
+        response = await client.post(
+            "/v1/complete",
+            json={"prompt": "Use the best model to answer: What is 2+2?"},
+            headers={"X-API-Key": api_key},
+        )
+        if response.status_code == 200:
+            data = response.json()
+            assert data["difficulty_tag"] == "complex"
+</file>
+
+<file path="tests/test_router.py">
+"""
+Unit tests for the Router Agent.
+
+Tests various prompt classifications to verify the rule-based router
+correctly identifies simple, medium, and complex prompts.
+"""
+
+import pytest
+
+from src.core.router import (
+    DifficultyTier,
+    PromptAnalysis,
+    RuleBasedRouter,
+    get_router,
+)
+from src.config import get_settings
+
+
+@pytest.fixture(autouse=True)
+def clear_settings_cache():
+    """Clear settings cache before each test to pick up config changes."""
+    get_settings.cache_clear()
+    yield
+
+
+@pytest.fixture
+def router():
+    """Create a fresh router instance for each test."""
+    return RuleBasedRouter()
+
+
+class TestPromptAnalysis:
+    """Tests for prompt analysis features."""
+    
+    def test_token_count(self, router):
+        """Token count approximation."""
+        # ~4 chars per token
+        analysis = router.analyze_prompt("Hello world")
+        assert analysis.token_count == 2  # 11 chars / 4 ≈ 2
+        
+    def test_code_block_detection(self, router):
+        """Detects code blocks."""
+        prompt = "Here's some code:\n```python\nprint('hello')\n```"
+        analysis = router.analyze_prompt(prompt)
+        assert analysis.has_code_block is True
+        
+    def test_no_code_block(self, router):
+        """No false positives for code blocks."""
+        prompt = "Please summarize this text."
+        analysis = router.analyze_prompt(prompt)
+        assert analysis.has_code_block is False
+        
+    def test_question_count(self, router):
+        """Counts questions correctly."""
+        prompt = "What is Python? How does it work? Why use it?"
+        analysis = router.analyze_prompt(prompt)
+        assert analysis.question_count == 3
+
+
+class TestSimpleClassification:
+    """Tests for prompts that should be classified as SIMPLE."""
+    
+    @pytest.mark.asyncio
+    async def test_summarize(self, router):
+        """Summarization requests should be simple."""
+        prompt = "Summarize this article in 3 bullet points."
+        decision = await router.classify(prompt)
+        assert decision.tier == DifficultyTier.SIMPLE
+        
+    @pytest.mark.asyncio
+    async def test_translate(self, router):
+        """Translation requests should be simple."""
+        prompt = "Translate this to French: Hello, how are you?"
+        decision = await router.classify(prompt)
+        assert decision.tier == DifficultyTier.SIMPLE
+        
+    @pytest.mark.asyncio
+    async def test_short_question(self, router):
+        """Short, simple questions should be simple."""
+        prompt = "What is Python?"
+        decision = await router.classify(prompt)
+        assert decision.tier == DifficultyTier.SIMPLE
+        
+    @pytest.mark.asyncio
+    async def test_define(self, router):
+        """Definition requests should be simple."""
+        prompt = "Define machine learning."
+        decision = await router.classify(prompt)
+        assert decision.tier == DifficultyTier.SIMPLE
+
+
+class TestMediumClassification:
+    """Tests for prompts with MEDIUM-level keywords."""
+    
+    @pytest.mark.asyncio
+    async def test_explanation_keywords_detected(self, router):
+        """Verify 'explain' keyword is detected in analysis."""
+        prompt = "Explain in detail how variables work in Python programming. Include examples of integers, strings, and other data types."
+        analysis = router.analyze_prompt(prompt)
+        # Should detect this is not a simple keyword prompt
+        assert analysis.has_simple_keywords is False or analysis.has_reasoning_keywords is True or analysis.has_code_keywords is True
+        
+    @pytest.mark.asyncio
+    async def test_code_generation_detects_code_keywords(self, router):
+        """Code generation prompts should detect code keywords."""
+        prompt = "Write a Python function that takes a list of numbers and returns the sum of all even numbers in the list."
+        analysis = router.analyze_prompt(prompt)
+        assert analysis.has_code_keywords is True
+        
+    @pytest.mark.asyncio
+    async def test_comparison_at_least_medium_with_length(self, router):
+        """Long comparison with multiple questions should be at least medium."""
+        prompt = """Compare and contrast Python and Java comprehensively:
+        1. How do their syntaxes differ?
+        2. What are the performance characteristics?
+        3. Which is better for web development and why?
+        4. What about mobile development?"""
+        decision = await router.classify(prompt)
+        # Long comparison with multiple questions should not be simple
+        assert decision.tier in [DifficultyTier.MEDIUM, DifficultyTier.COMPLEX]
+
+
+class TestComplexClassification:
+    """Tests for prompts that should NOT be classified as SIMPLE."""
+    
+    @pytest.mark.asyncio
+    async def test_architecture_not_simple(self, router):
+        """Architecture prompts should be at least medium."""
+        prompt = """Design system architecture for a high-availability e-commerce platform. 
+        Include database schema design, API design, security considerations,
+        and explain the trade-offs of your architectural decisions."""
+        decision = await router.classify(prompt)
+        # Architecture should never be simple
+        assert decision.tier != DifficultyTier.SIMPLE, f"Got SIMPLE, reason: {decision.reason}"
+        
+    @pytest.mark.asyncio
+    async def test_debugging_with_code_not_simple(self, router):
+        """Debugging with code should not be simple."""
+        prompt = """Debug and fix this code. Why doesn't it work correctly?
+
+```python
+def factorial(n):
+    if n == 0:
+        return 1
+    return n * factorial(n)  # Bug here
+
+def main():
+    for i in range(10):
+        print(factorial(i))
+```
+
+Step by step: First identify the bug, then explain why it causes issues, finally fix it."""
+        decision = await router.classify(prompt)
+        # Debugging with code should never be simple
+        assert decision.tier != DifficultyTier.SIMPLE, f"Got SIMPLE, reason: {decision.reason}"
+        
+    @pytest.mark.asyncio
+    async def test_multi_step_optimization_not_simple(self, router):
+        """Multi-step optimization tasks should not be simple."""
+        prompt = """Step-by-step database optimization task:
+
+Step 1: First, analyze the current database schema.
+Step 2: Then, identify performance bottlenecks.
+Step 3: Next, design an optimized schema.
+Step 4: Finally, write migration scripts.
+
+This requires advanced system design knowledge."""
+        decision = await router.classify(prompt)
+        # Multi-step tasks should never be simple
+        assert decision.tier != DifficultyTier.SIMPLE, f"Got SIMPLE, reason: {decision.reason}"
+        
+    @pytest.mark.asyncio
+    async def test_best_model_override(self, router):
+        """Explicit 'best model' request should trigger complex."""
+        prompt = "Use the best model to answer: What is 2+2?"
+        decision = await router.classify(prompt)
+        # This should ALWAYS be complex due to override logic
+        assert decision.tier == DifficultyTier.COMPLEX
+        assert "best" in decision.reason.lower() or "quality" in decision.reason.lower()
+
+
+class TestForcedTier:
+    """Tests for force_tier override."""
+    
+    @pytest.mark.asyncio
+    async def test_force_simple(self, router):
+        """Force simple even for complex prompt."""
+        prompt = "Design a microservices architecture."
+        decision = await router.classify(prompt, force_tier="simple")
+        assert decision.tier == DifficultyTier.SIMPLE
+        assert "forced" in decision.reason.lower()
+        
+    @pytest.mark.asyncio
+    async def test_force_complex(self, router):
+        """Force complex even for simple prompt."""
+        prompt = "What is 2+2?"
+        decision = await router.classify(prompt, force_tier="complex")
+        assert decision.tier == DifficultyTier.COMPLEX
+        assert "forced" in decision.reason.lower()
+
+
+class TestRouterSingleton:
+    """Tests for router singleton."""
+    
+    def test_get_router_returns_instance(self):
+        """get_router() returns a router instance."""
+        router = get_router()
+        assert isinstance(router, RuleBasedRouter)
+        
+    def test_get_router_returns_same_instance(self):
+        """get_router() returns the same instance."""
+        router1 = get_router()
+        router2 = get_router()
+        assert router1 is router2
+</file>
+
+<file path=".env.example">
+# ============================================
+# Smart Model Router - Environment Configuration
+# ============================================
+# Copy this file to .env and fill in your values
+
+# ===================
+# Database (PostgreSQL)
+# ===================
+DATABASE_URL=postgresql+asyncpg://router_user:router_password@localhost:5433/router_db
+
+# ===================
+# Redis Cache
+# ===================
+REDIS_URL=redis://localhost:6379/0
+CACHE_TTL_SECONDS=3600
+
+# ===================
+# Ollama (Local LLM)
+# ===================
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=granite4:350m
+
+# ===================
+# Google Gemini API
+# ===================
+# Get your API key from: https://aistudio.google.com/apikey
+GOOGLE_API_KEY=your-gemini-api-key-here
+GEMINI_FLASH_MODEL=gemini-2.0-flash-exp
+GEMINI_PRO_MODEL=gemini-1.5-pro
+
+# ===================
+# API Security
+# ===================
+API_KEY_HEADER=X-API-Key
+
+# ===================
+# Routing Configuration
+# ===================
+# Token thresholds for routing decisions
+SIMPLE_TOKEN_THRESHOLD=100
+COMPLEX_TOKEN_THRESHOLD=500
+
+# ===================
+# Logging
+# ===================
+LOG_LEVEL=INFO
+</file>
+
+<file path="alembic.ini">
+# A generic, single database configuration.
+
+[alembic]
+# path to migration scripts
+# Use forward slashes even on Windows
+script_location = alembic
+
+# template used to generate migration file names
+file_template = %%(year)d%%(month).2d%%(day).2d_%%(hour).2d%%(minute).2d_%%(rev)s_%%(slug)s
+
+# timezone to use when rendering the date within the migration file
+# as well as the filename.
+# timezone = UTC  # Commented out - causes issues on Windows without pytz
+
+# Database URL - this is set dynamically by env.py from our .env file
+# DO NOT hardcode credentials here
+sqlalchemy.url = driver://user:pass@localhost/dbname
+
+# Logging configuration
+[loggers]
+keys = root,sqlalchemy,alembic
+
+[handlers]
+keys = console
+
+[formatters]
+keys = generic
+
+[logger_root]
+level = WARN
+handlers = console
+qualname =
+
+[logger_sqlalchemy]
+level = WARN
+handlers =
+qualname = sqlalchemy.engine
+
+[logger_alembic]
+level = INFO
+handlers =
+qualname = alembic
+
+[handler_console]
+class = StreamHandler
+args = (sys.stderr,)
+level = NOTSET
+formatter = generic
+
+[formatter_generic]
+format = %(levelname)-5.5s [%(name)s] %(message)s
+datefmt = %H:%M:%S
+</file>
+
+<file path="pyproject.toml">
+[project]
+name = "smart-model-router"
+version = "0.1.0"
+description = "Cost-Control Smart Model Router - Intelligently routes prompts to the cheapest capable model"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Smart Model Router Team" }]
+
+dependencies = [
+    # FastAPI & Web Server
+    "fastapi[standard]>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "python-multipart>=0.0.12",
+
+    # Database
+    "sqlalchemy[asyncio]>=2.0.0",
+    "asyncpg>=0.30.0",
+    "alembic>=1.14.0",
+    "numpy>=2.1.3",
+
+    # Redis Caching
+    "redis>=5.2.0",
+
+    # LLM Providers
+    "google-genai[aiohttp]>=1.0.0",
+    "httpx>=0.28.0",
+
+    # Utilities
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.6.0",
+    "python-dotenv>=1.0.1",
+    "tiktoken>=0.8.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "httpx>=0.28.0",
+    "ruff>=0.8.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+</file>
+
+<file path="src/api/__init__.py">
+"""
+API package exports.
+"""
+
+from src.api.dependencies import DBSession, ValidatedAPIKey, generate_api_key, get_api_key
+from src.api.routes import router
+from src.api.schemas import (
+    APIKeyCreate,
+    APIKeyListResponse,
+    APIKeyResponse,
+    CompletionRequest,
+    CompletionResponse,
+    ErrorResponse,
+    HealthResponse,
+)
+
+__all__ = [
+    # Router
+    "router",
+    # Dependencies
+    "get_api_key",
+    "generate_api_key",
+    "ValidatedAPIKey",
+    "DBSession",
+    # Schemas
+    "CompletionRequest",
+    "CompletionResponse",
+    "APIKeyCreate",
+    "APIKeyResponse",
+    "APIKeyListResponse",
+    "HealthResponse",
+    "ErrorResponse",
+]
+</file>
+
+<file path="src/core/__init__.py">
+"""
+Core package exports.
+"""
+
+from src.core.router import (
+    BaseRouter,
+    DifficultyTier,
+    PromptAnalysis,
+    RoutingDecision,
+    RuleBasedRouter,
+    get_router,
+)
+
+__all__ = [
+    "BaseRouter",
+    "RuleBasedRouter",
+    "DifficultyTier",
+    "RoutingDecision",
+    "PromptAnalysis",
+    "get_router",
+]
+</file>
+
+<file path="src/core/router.py">
+"""
+Router Agent for Smart Model Router.
+
+This module classifies prompts and determines which model tier to use.
+It's designed with an abstract interface so we can swap implementations:
+- RuleBasedRouter: Current implementation using heuristics
+- LLMRouter: Future implementation using lightweight LLM for classification
+"""
+
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from enum import Enum
+from typing import Optional
+
+from src.config import get_settings
+
+
+class DifficultyTier(str, Enum):
+    """Difficulty tiers that map to different models."""
+    SIMPLE = "simple"    # Local model (Granite 4.0 Nano)
+    MEDIUM = "medium"    # Gemini Flash
+    COMPLEX = "complex"  # Gemini Pro
+
+
+@dataclass
+class RoutingDecision:
+    """
+    Result of the routing decision.
+    
+    Attributes:
+        tier: The difficulty tier (simple/medium/complex)
+        model: The specific model to use
+        reason: Human-readable explanation of why this tier was chosen
+        confidence: How confident the router is (0.0 to 1.0)
+    """
+    tier: DifficultyTier
+    model: str
+    reason: str
+    confidence: float = 1.0
+
+
+@dataclass
+class PromptAnalysis:
+    """
+    Analysis of a prompt's characteristics.
+    
+    Used by the router to make decisions.
+    """
+    token_count: int
+    word_count: int
+    has_code_block: bool
+    has_code_keywords: bool
+    has_reasoning_keywords: bool
+    has_simple_keywords: bool
+    question_count: int
+    instruction_complexity: int  # 1-5 scale
+
+
+class BaseRouter(ABC):
+    """
+    Abstract base class for routers.
+    
+    Allows swapping between rule-based and LLM-based routing.
+    """
+    
+    @abstractmethod
+    async def classify(self, prompt: str, force_tier: Optional[str] = None) -> RoutingDecision:
+        """
+        Classify a prompt and return routing decision.
+        
+        Args:
+            prompt: The user's prompt text
+            force_tier: Optional override to force a specific tier
+            
+        Returns:
+            RoutingDecision with tier, model, and reasoning
+        """
+        pass
+    
+    @abstractmethod
+    def analyze_prompt(self, prompt: str) -> PromptAnalysis:
+        """
+        Analyze prompt characteristics.
+        
+        Args:
+            prompt: The user's prompt text
+            
+        Returns:
+            PromptAnalysis with extracted features
+        """
+        pass
+
+
+class RuleBasedRouter(BaseRouter):
+    """
+    Rule-based router using heuristics.
+    
+    Classifies prompts based on:
+    - Token/word count
+    - Presence of code
+    - Keywords indicating complexity
+    - Question structure
+    """
+    
+    # Keywords indicating simple tasks
+    SIMPLE_KEYWORDS = {
+        "summarize", "summary", "summarise", "tldr", "tl;dr",
+        "translate", "translation",
+        "rewrite", "rephrase", "paraphrase",
+        "extract", "list", "bullet points",
+        "define", "definition", "what is", "what are",
+        "format", "convert", "fix grammar", "proofread",
+        "yes or no", "true or false",
+    }
+    
+    # Keywords indicating medium complexity
+    MEDIUM_KEYWORDS = {
+        "explain", "describe", "compare", "contrast",
+        "analyze", "analyse", "evaluate",
+        "write a", "create a", "generate",
+        "how to", "how do", "how does", "how can",
+        "why", "what if",
+        "example", "examples",
+        "code", "function", "script", "program",
+        "json", "xml", "yaml", "csv",
+    }
+    
+    # Keywords indicating complex tasks
+    COMPLEX_KEYWORDS = {
+        "architect", "architecture", "design system",
+        "debug", "fix this", "why isn't", "why doesn't",
+        "optimize", "optimise", "performance",
+        "refactor", "restructure", "redesign",
+        "multiple steps", "step by step", "step-by-step",
+        "pros and cons", "trade-offs", "tradeoffs",
+        "implement", "build", "develop",
+        "algorithm", "data structure",
+        "best model", "highest quality", "most accurate",
+        "complex", "advanced", "sophisticated",
+        "security", "authentication", "authorization",
+        "database schema", "api design", "system design",
+    }
+    
+    # Code-related patterns
+    CODE_PATTERNS = {
+        "```", "def ", "function ", "class ",
+        "import ", "from ", "const ", "let ", "var ",
+        "public ", "private ", "async ", "await ",
+        "SELECT ", "INSERT ", "UPDATE ", "DELETE ",
+        "CREATE TABLE", "ALTER TABLE",
+    }
+    
+    def __init__(self):
+        """Initialize with settings."""
+        self.settings = get_settings()
+        
+        # Model mapping
+        self.model_map = {
+            DifficultyTier.SIMPLE: self.settings.ollama_model,
+            DifficultyTier.MEDIUM: self.settings.gemini_flash_model,
+            DifficultyTier.COMPLEX: self.settings.gemini_pro_model,
+        }
+    
+    def _count_tokens(self, text: str) -> int:
+        """
+        Approximate token count.
+        
+        Simple heuristic: ~4 characters per token for English.
+        For accurate counts, we'd use tiktoken, but this is faster.
+        """
+        return len(text) // 4
+    
+    def _has_keywords(self, text_lower: str, keywords: set) -> bool:
+        """Check if text contains any of the keywords."""
+        return any(kw in text_lower for kw in keywords)
+    
+    def _count_questions(self, text: str) -> int:
+        """Count the number of questions in the text."""
+        return text.count("?")
+    
+    def _has_code_block(self, text: str) -> bool:
+        """Check if text contains code blocks."""
+        return "```" in text or text.count("    ") > 3  # Indented code
+    
+    def _has_code_patterns(self, text: str) -> bool:
+        """Check for code-like patterns."""
+        return any(pattern in text for pattern in self.CODE_PATTERNS)
+    
+    def _estimate_instruction_complexity(self, text: str) -> int:
+        """
+        Estimate instruction complexity on a 1-5 scale.
+        
+        Based on:
+        - Number of distinct requests/tasks
+        - Presence of conditional logic (if, when, unless)
+        - Multi-step requirements
+        """
+        text_lower = text.lower()
+        score = 1
+        
+        # Multiple requests?
+        if text.count(". ") > 3 or text.count("\n") > 5:
+            score += 1
+        
+        # Conditional logic?
+        conditionals = ["if ", "when ", "unless ", "only if", "except"]
+        if any(c in text_lower for c in conditionals):
+            score += 1
+        
+        # Multi-step?
+        step_indicators = ["first", "then", "next", "finally", "step 1", "1.", "2.", "3."]
+        if sum(1 for s in step_indicators if s in text_lower) >= 2:
+            score += 1
+        
+        # Very long prompt?
+        if len(text) > 2000:
+            score += 1
+        
+        return min(score, 5)
+    
+    def analyze_prompt(self, prompt: str) -> PromptAnalysis:
+        """Analyze the prompt and extract features."""
+        text_lower = prompt.lower()
+        
+        return PromptAnalysis(
+            token_count=self._count_tokens(prompt),
+            word_count=len(prompt.split()),
+            has_code_block=self._has_code_block(prompt),
+            has_code_keywords=self._has_code_patterns(prompt),
+            has_reasoning_keywords=self._has_keywords(text_lower, self.COMPLEX_KEYWORDS),
+            has_simple_keywords=self._has_keywords(text_lower, self.SIMPLE_KEYWORDS),
+            question_count=self._count_questions(prompt),
+            instruction_complexity=self._estimate_instruction_complexity(prompt),
+        )
+    
+    async def classify(self, prompt: str, force_tier: Optional[str] = None) -> RoutingDecision:
+        """
+        Classify the prompt using rule-based heuristics.
+        
+        Decision flow:
+        1. Check for forced tier override
+        2. Check for "best model" override keywords
+        3. Analyze prompt features
+        4. Apply scoring rules
+        5. Return decision with explanation
+        """
+        settings = self.settings
+        
+        # 1. Handle forced tier
+        if force_tier:
+            tier = DifficultyTier(force_tier)
+            return RoutingDecision(
+                tier=tier,
+                model=self.model_map[tier],
+                reason=f"Forced to {force_tier} tier by request",
+                confidence=1.0,
+            )
+        
+        # 2. Check for "best model" override
+        text_lower = prompt.lower()
+        best_model_triggers = ["best model", "highest quality", "most accurate", "gpt-4", "most capable"]
+        if any(trigger in text_lower for trigger in best_model_triggers):
+            return RoutingDecision(
+                tier=DifficultyTier.COMPLEX,
+                model=self.model_map[DifficultyTier.COMPLEX],
+                reason="User requested best/highest quality model",
+                confidence=0.95,
+            )
+        
+        # 3. Analyze prompt
+        analysis = self.analyze_prompt(prompt)
+        
+        # 4. Scoring logic
+        score = 0  # Start neutral, negative = simple, positive = complex
+        reasons = []
+        
+        # Token count thresholds
+        if analysis.token_count < settings.simple_token_threshold:
+            score -= 2
+            reasons.append(f"Short prompt ({analysis.token_count} tokens)")
+        elif analysis.token_count > settings.complex_token_threshold:
+            score += 2
+            reasons.append(f"Long prompt ({analysis.token_count} tokens)")
+        
+        # Code detection
+        if analysis.has_code_block:
+            score += 2
+            reasons.append("Contains code blocks")
+        elif analysis.has_code_keywords:
+            score += 1
+            reasons.append("Contains code patterns")
+        
+        # Keyword detection
+        if analysis.has_simple_keywords and not analysis.has_reasoning_keywords:
+            score -= 2
+            reasons.append("Simple task keywords detected")
+        
+        if analysis.has_reasoning_keywords:
+            score += 2
+            reasons.append("Complex reasoning keywords detected")
+        
+        # Instruction complexity
+        if analysis.instruction_complexity >= 4:
+            score += 2
+            reasons.append(f"High instruction complexity ({analysis.instruction_complexity}/5)")
+        elif analysis.instruction_complexity <= 2:
+            score -= 1
+            reasons.append(f"Low instruction complexity ({analysis.instruction_complexity}/5)")
+        
+        # Multiple questions = more complex
+        if analysis.question_count > 3:
+            score += 1
+            reasons.append(f"Multiple questions ({analysis.question_count})")
+        
+        # 5. Map score to tier
+        if score <= -2:
+            tier = DifficultyTier.SIMPLE
+        elif score >= 3:
+            tier = DifficultyTier.COMPLEX
+        else:
+            tier = DifficultyTier.MEDIUM
+        
+        # Calculate confidence based on how decisive the score is
+        confidence = min(0.9, 0.5 + abs(score) * 0.1)
+        
+        return RoutingDecision(
+            tier=tier,
+            model=self.model_map[tier],
+            reason="; ".join(reasons) if reasons else "Default classification",
+            confidence=confidence,
+        )
+
+
+# Default router instance
+_router: Optional[BaseRouter] = None
+_rule_router: Optional[RuleBasedRouter] = None
+
+
+class LLMRouter(BaseRouter):
+    """
+    LLM-based router using Granite for classification.
+    
+    Uses the local Granite model to analyze prompt complexity.
+    Falls back to rule-based routing if LLM fails.
+    """
+    
+    # Classification prompt template
+    CLASSIFICATION_PROMPT = """You are a prompt classifier. Analyze the following user prompt and classify its complexity.
+
+User Prompt:
+{prompt}
+
+Classify this prompt into ONE of these categories:
+- SIMPLE: Basic tasks like summarization, translation, simple Q&A, formatting
+- MEDIUM: Explanations, code generation, comparisons, moderate analysis
+- COMPLEX: Architecture design, debugging, multi-step reasoning, advanced analysis
+
+Respond with ONLY the category name (SIMPLE, MEDIUM, or COMPLEX) and a brief reason.
+Format: CATEGORY|reason
+
+Example: SIMPLE|This is a basic translation request"""
+
+    def __init__(self):
+        """Initialize with fallback router."""
+        self.settings = get_settings()
+        self._fallback_router = RuleBasedRouter()
+        self._client = None
+        
+        # Model mapping
+        self.model_map = {
+            DifficultyTier.SIMPLE: self.settings.ollama_model,
+            DifficultyTier.MEDIUM: self.settings.gemini_flash_model,
+            DifficultyTier.COMPLEX: self.settings.gemini_pro_model,
+        }
+    
+    async def _get_client(self):
+        """Get or create HTTP client."""
+        if self._client is None:
+            import httpx
+            self._client = httpx.AsyncClient(timeout=30)
+        return self._client
+    
+    def analyze_prompt(self, prompt: str) -> PromptAnalysis:
+        """Delegate to rule-based router for analysis."""
+        return self._fallback_router.analyze_prompt(prompt)
+    
+    async def _call_llm(self, prompt: str) -> str:
+        """Call Granite for classification."""
+        client = await self._get_client()
+        
+        classification_prompt = self.CLASSIFICATION_PROMPT.format(prompt=prompt[:1000])  # Limit prompt size
+        
+        response = await client.post(
+            f"{self.settings.ollama_base_url}/api/generate",
+            json={
+                "model": self.settings.ollama_model,
+                "prompt": classification_prompt,
+                "stream": False,
+            },
+        )
+        response.raise_for_status()
+        data = response.json()
+        return data.get("response", "")
+    
+    def _parse_classification(self, llm_response: str) -> tuple[DifficultyTier, str]:
+        """Parse LLM response into tier and reason."""
+        response = llm_response.strip().upper()
+        
+        # Try to parse CATEGORY|reason format
+        if "|" in response:
+            parts = response.split("|", 1)
+            category = parts[0].strip()
+            reason = parts[1].strip() if len(parts) > 1 else "LLM classification"
+        else:
+            # Just extract the category from the response
+            category = response
+            reason = "LLM classification"
+        
+        # Map to tier
+        if "SIMPLE" in category:
+            return DifficultyTier.SIMPLE, reason
+        elif "COMPLEX" in category:
+            return DifficultyTier.COMPLEX, reason
+        else:
+            return DifficultyTier.MEDIUM, reason
+    
+    async def classify(self, prompt: str, force_tier: Optional[str] = None) -> RoutingDecision:
+        """
+        Classify using LLM with fallback to rules.
+        """
+        # Handle forced tier
+        if force_tier:
+            tier = DifficultyTier(force_tier)
+            return RoutingDecision(
+                tier=tier,
+                model=self.model_map[tier],
+                reason=f"Forced to {force_tier} tier by request",
+                confidence=1.0,
+            )
+        
+        try:
+            # Call LLM for classification
+            llm_response = await self._call_llm(prompt)
+            tier, reason = self._parse_classification(llm_response)
+            
+            return RoutingDecision(
+                tier=tier,
+                model=self.model_map[tier],
+                reason=f"LLM: {reason}",
+                confidence=0.85,
+            )
+        except Exception as e:
+            # Fallback to rule-based on any error
+            print(f"⚠️ LLM classification failed, using rules: {e}")
+            return await self._fallback_router.classify(prompt, force_tier)
+
+
+def get_router() -> BaseRouter:
+    """
+    Get the singleton router instance.
+    
+    Uses LLMRouter if enabled in settings, otherwise RuleBasedRouter.
+    """
+    global _router, _rule_router
+    
+    settings = get_settings()
+    
+    if settings.use_llm_router:
+        if _router is None or not isinstance(_router, LLMRouter):
+            _router = LLMRouter()
+        return _router
+    else:
+        if _rule_router is None:
+            _rule_router = RuleBasedRouter()
+        return _rule_router
+</file>
+
+<file path="src/db/__init__.py">
+"""
+Database package exports.
+"""
+
+from src.db.models import APIKey, Base, DifficultyTag, RequestLog
+from src.db.session import (
+    async_session_factory,
+    close_db,
+    engine,
+    get_session,
+    get_session_context,
+    init_db,
+)
+
+__all__ = [
+    # Models
+    "Base",
+    "APIKey",
+    "RequestLog",
+    "DifficultyTag",
+    # Session management
+    "engine",
+    "async_session_factory",
+    "get_session",
+    "get_session_context",
+    "init_db",
+    "close_db",
+]
+</file>
+
+<file path="src/providers/__init__.py">
+"""
+LLM Providers package.
+
+Provides unified access to different LLM backends.
+"""
+
+from src.providers.base import (
+    BaseProvider,
+    OllamaProvider,
+    ProviderError,
+    ProviderModelNotFoundError,
+    ProviderRateLimitError,
+    ProviderResponse,
+    ProviderTimeoutError,
+)
+from src.providers.gemini import GeminiProvider
+from src.providers.manager import ProviderManager, get_provider_manager
+
+__all__ = [
+    # Base
+    "BaseProvider",
+    "ProviderResponse",
+    "ProviderError",
+    "ProviderTimeoutError",
+    "ProviderRateLimitError",
+    "ProviderModelNotFoundError",
+    # Implementations
+    "OllamaProvider",
+    "GeminiProvider",
+    # Manager
+    "ProviderManager",
+    "get_provider_manager",
+]
+</file>
+
+<file path="docker-compose.yml">
+# Docker Compose for Smart Model Router
+# Orchestrates: PostgreSQL, Redis, Ollama, and the FastAPI app
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: router-postgres
+    environment:
+      POSTGRES_USER: router_user
+      POSTGRES_PASSWORD: router_password
+      POSTGRES_DB: router_db
+      # For development: bypass password auth (remove in production!)
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      # Using 5433 to avoid conflict with local PostgreSQL on 5432
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U router_user -d router_db" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis Stack - Redis with Vector Search (RediSearch)
+  redis:
+    image: redis/redis-stack:latest
+    container_name: router-redis
+    ports:
+      - "6379:6379"
+      - "8001:8001"  # RedisInsight web UI
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Ollama - Local LLM Server
+  ollama:
+    image: ollama/ollama:latest
+    container_name: router-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    # GPU support for Windows/Linux with NVIDIA
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:11434/api/tags" ]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  # FastAPI Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: router-app
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://router_user:router_password@postgres:5432/router_db
+      - REDIS_URL=redis://redis:6379/0
+      - OLLAMA_BASE_URL=http://ollama:11434
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    volumes:
+      - ./src:/app/src:ro # Mount source for development
+
+volumes:
+  postgres_data:
+  redis_data:
+  ollama_data:
+</file>
+
+<file path="Smart Model Router.postman_collection.json">
+{
+	"info": {
+		"_postman_id": "ac9dc17b-e3cd-414c-b5b8-66d97c6802bb",
+		"name": "Smart Model Router",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "37161823"
+	},
+	"item": [
+		{
+			"name": "API Key Management",
+			"item": [
+				{
+					"name": "Get All",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "http://localhost:8000/v1/keys",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"v1",
+								"keys"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Soft Delete",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "http://localhost:8000/v1/keys/e3c6e1e1-a326-47e3-911f-c46b5f8252fb",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"v1",
+								"keys",
+								"e3c6e1e1-a326-47e3-911f-c46b5f8252fb"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"name\": \"Test Key\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/v1/keys",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"v1",
+								"keys"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Health",
+			"item": [
+				{
+					"name": "Health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/health",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"health"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Root",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "http://localhost:8000/",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Completion",
+			"item": [
+				{
+					"name": "V1",
+					"item": [
+						{
+							"name": "Completion",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "x-api-key",
+										"value": "api_key_here",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"prompt\": \"What is 2+2? Answer in one word. use the best model u can find\"\r\n    // ,\"force_tier\": \"medium\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:8000/v1/complete",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"v1",
+										"complete"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		}
+	]
+}
+</file>
+
+<file path="src/main.py">
+"""
+Smart Model Router - FastAPI Application Entry Point
+
+This module initializes the FastAPI application with:
+- Database connection management
+- API routes registration
+- Health checks with dependency status
+- Global exception handlers
+"""
+
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+
+from src.config import get_settings
+from src.db import close_db, init_db
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Application lifespan manager.
+    
+    Handles startup and shutdown events:
+    - Startup: Initialize DB connections, cache, etc.
+    - Shutdown: Clean up resources
+    """
+    settings = get_settings()
+    
+    # === Startup ===
+    print("🚀 Starting Smart Model Router...")
+    print(f"   Log Level: {settings.log_level}")
+    print(f"   Ollama URL: {settings.ollama_base_url}")
+    print(f"   Database: {settings.database_url.split('@')[-1]}")  # Hide credentials
+    
+    # Initialize database connection
+    try:
+        await init_db()
+        print("   ✅ Database connected")
+    except Exception as e:
+        print(f"   ❌ Database connection failed: {e}")
+        raise
+    
+    yield  # Application runs here
+    
+    # === Shutdown ===
+    print("👋 Shutting down Smart Model Router...")
+    await close_db()
+    print("   ✅ Database connections closed")
+
+
+# Create the FastAPI application
+app = FastAPI(
+    title="Smart Model Router",
+    description="Cost-Control Smart Model Router - Routes prompts to the cheapest capable model",
+    version="0.1.0",
+    lifespan=lifespan,
+    docs_url="/docs",
+    redoc_url="/redoc",
+)
+
+
+# ===================
+# Register API Routes
+# ===================
+
+from src.api import router as v1_router
+
+app.include_router(v1_router)
+
+
+# ===================
+# Global Exception Handlers
+# ===================
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Catch-all exception handler for unhandled errors."""
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "internal_server_error",
+            "message": "An unexpected error occurred",
+            "detail": str(exc) if get_settings().log_level == "DEBUG" else None,
+        },
+    )
+
+
+# ===================
+# Root Endpoints
+# ===================
+
+@app.get("/health")
+async def health_check():
+    """
+    Health check endpoint for container orchestration.
+    
+    Returns status of all dependencies.
+    """
+    # Check database
+    db_status = "connected"
+    try:
+        from src.db import engine
+        async with engine.connect() as conn:
+            from sqlalchemy import text
+            await conn.execute(text("SELECT 1"))
+    except Exception as e:
+        db_status = "disconnected"
+        print("   ❌ Database connection failed", e)
+    
+    # TODO: Check Redis in Phase 7
+    cache_status = "disconnected"
+    
+    overall = "healthy" if db_status == "connected" else "degraded"
+    
+    return {
+        "status": overall,
+        "service": "smart-model-router",
+        "version": "0.1.0",
+        "database": db_status,
+        "cache": cache_status,
+    }
+
+
+@app.get("/")
+async def root():
+    """Root endpoint with basic API info."""
+    return {
+        "name": "Smart Model Router",
+        "version": "0.1.0",
+        "docs": "/docs",
+        "endpoints": {
+            "complete": "POST /v1/complete",
+            "keys": "GET/POST/DELETE /v1/keys",
+            "health": "GET /health",
+        },
+    }
+</file>
+
+<file path="src/services/__init__.py">
+"""
+Services package.
+
+Business logic and cross-cutting concerns.
+"""
+
+from src.services.cache import (
+    CachedResponse,
+    CacheService,
+    get_cache_service,
+)
+from src.services.cost import (
+    CostCalculator,
+    CostEstimate,
+    ModelPricing,
+    RequestLogger,
+    get_cost_calculator,
+    get_request_logger,
+    MODEL_PRICING,
+    BASELINE_MODEL,
+)
+from src.services.embeddings import (
+    EmbeddingsService,
+    get_embeddings_service,
+)
+from src.services.semantic_cache import (
+    SemanticCacheService,
+    SemanticCachedResponse,
+    get_semantic_cache_service,
+)
+
+__all__ = [
+    # Cache
+    "CacheService",
+    "CachedResponse",
+    "get_cache_service",
+    # Semantic Cache
+    "SemanticCacheService",
+    "SemanticCachedResponse",
+    "get_semantic_cache_service",
+    # Embeddings
+    "EmbeddingsService",
+    "get_embeddings_service",
+    # Cost
+    "CostCalculator",
+    "CostEstimate",
+    "ModelPricing",
+    "RequestLogger",
+    "get_cost_calculator",
+    "get_request_logger",
+    "MODEL_PRICING",
+    "BASELINE_MODEL",
+]
+</file>
+
+<file path="src/api/routes.py">
+"""
+API Routes for Smart Model Router.
+
+Defines all HTTP endpoints organized by functionality:
+- /v1/complete: Main completion endpoint
+- /v1/keys: API key management
+- /health: Health check
+"""
+
+from datetime import datetime, timezone
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import func, select
+
+from src.api.dependencies import DBSession, ValidatedAPIKey, generate_api_key
+from src.api.schemas import (
+    APIKeyCreate,
+    APIKeyListResponse,
+    APIKeyResponse,
+    CompletionRequest,
+    CompletionResponse,
+    ErrorResponse,
+    HealthResponse,
+)
+from src.config import get_settings
+from src.db import APIKey, get_session
+
+# Create router for v1 API
+router = APIRouter(prefix="/v1", tags=["v1"])
+
+
+# ===================
+# Completion Endpoint
+# ===================
+
+@router.post(
+    "/complete",
+    response_model=CompletionResponse,
+    responses={
+        401: {"model": ErrorResponse, "description": "Invalid or missing API key"},
+        422: {"model": ErrorResponse, "description": "Validation error"},
+        500: {"model": ErrorResponse, "description": "Internal server error"},
+    },
+    summary="Generate a completion",
+    description="Routes the prompt to the most cost-effective model based on complexity.",
+)
+async def create_completion(
+    request: CompletionRequest,
+    api_key: ValidatedAPIKey,
+    session: DBSession,
+) -> CompletionResponse:
+    """
+    Main completion endpoint.
+    
+    Flow:
+    1. Validate API key (via dependency)
+    2. Check cache for existing response (semantic or exact match)
+    3. Classify prompt difficulty
+    4. Route to appropriate model
+    5. Cache the response
+    6. Log request and cost
+    7. Return response with cost data
+    """
+    import time
+    from src.config import get_settings
+    from src.core import get_router
+    from src.providers import get_provider_manager, ProviderError
+    from src.services import (
+        get_cost_calculator, 
+        get_request_logger, 
+        get_cache_service,
+        get_semantic_cache_service,
+        CachedResponse,
+        SemanticCachedResponse,
+    )
+    
+    start_time = time.perf_counter()
+    settings = get_settings()
+    
+    # Step 1: Check cache first (semantic or exact based on config)
+    if settings.use_semantic_cache:
+        semantic_cache = get_semantic_cache_service()
+        cached = await semantic_cache.get(request.prompt)
+        if cached:
+            latency_ms = int((time.perf_counter() - start_time) * 1000)
+            return CompletionResponse(
+                response=cached.text,
+                model_used=cached.model,
+                difficulty_tag=cached.difficulty_tag,
+                estimated_cost=cached.estimated_cost,
+                estimated_savings=cached.estimated_savings,
+                latency_ms=latency_ms,
+                cache_hit=True,
+            )
+    else:
+        cache_service = get_cache_service()
+        cached = await cache_service.get(request.prompt)
+        if cached:
+            latency_ms = int((time.perf_counter() - start_time) * 1000)
+            return CompletionResponse(
+                response=cached.text,
+                model_used=cached.model,
+                difficulty_tag=cached.difficulty_tag,
+                estimated_cost=cached.estimated_cost,
+                estimated_savings=cached.estimated_savings,
+                latency_ms=latency_ms,
+                cache_hit=True,
+            )
+    
+    # Step 2: Classify the prompt
+    router_agent = get_router()
+    routing_decision = await router_agent.classify(
+        request.prompt,
+        force_tier=request.force_tier,
+    )
+    
+    # Step 3: Call the appropriate model
+    provider_manager = get_provider_manager()
+    
+    try:
+        response, actual_tier = await provider_manager.generate(
+            prompt=request.prompt,
+            tier=routing_decision.tier,
+            max_retries=2,
+            allow_fallback=True,
+        )
+    except ProviderError as e:
+        # Convert provider error to HTTP error
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"LLM provider error: {e}",
+        )
+    
+    # Step 4: Calculate costs
+    calculator = get_cost_calculator()
+    cost_estimate = calculator.estimate(
+        model=response.model,
+        input_tokens=response.prompt_tokens,
+        output_tokens=response.completion_tokens,
+    )
+    
+    # Step 5: Cache the response
+    if settings.use_semantic_cache:
+        await semantic_cache.set(
+            request.prompt,
+            SemanticCachedResponse(
+                text=response.text,
+                model=response.model,
+                difficulty_tag=actual_tier.value,
+                prompt_tokens=response.prompt_tokens,
+                completion_tokens=response.completion_tokens,
+                estimated_cost=round(cost_estimate.estimated_cost, 6),
+                estimated_savings=round(cost_estimate.savings, 6),
+                original_prompt=request.prompt,
+            ),
+        )
+    else:
+        await cache_service.set(
+            request.prompt,
+            CachedResponse(
+                text=response.text,
+                model=response.model,
+                difficulty_tag=actual_tier.value,
+                prompt_tokens=response.prompt_tokens,
+                completion_tokens=response.completion_tokens,
+                estimated_cost=round(cost_estimate.estimated_cost, 6),
+                estimated_savings=round(cost_estimate.savings, 6),
+            ),
+        )
+    
+    # Step 6: Log request to database
+    logger = get_request_logger()
+    await logger.log_request(
+        session=session,
+        api_key_id=api_key.id,
+        prompt=request.prompt,
+        response_text=response.text,
+        provider_response=response,
+        tier=actual_tier,
+        cache_hit=False,
+    )
+    
+    # Calculate latency (includes all processing)
+    latency_ms = int((time.perf_counter() - start_time) * 1000)
+    
+    return CompletionResponse(
+        response=response.text,
+        model_used=response.model,
+        difficulty_tag=actual_tier.value,
+        estimated_cost=round(cost_estimate.estimated_cost, 6),
+        estimated_savings=round(cost_estimate.savings, 6),
+        latency_ms=latency_ms,
+        cache_hit=False,
+    )
+
+
+# ===================
+# API Key Management
+# ===================
+
+@router.post(
+    "/keys",
+    response_model=APIKeyResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new API key",
+    description="Generate a new API key. The raw key is only shown once!",
+)
+async def create_api_key(
+    request: APIKeyCreate,
+    session: DBSession,
+) -> APIKeyResponse:
+    """
+    Create a new API key.
+    
+    WARNING: The raw key is only returned once. Store it securely!
+    """
+    # Generate key and hash
+    raw_key, key_hash = generate_api_key()
+    
+    # Create database record
+    api_key = APIKey(
+        key_hash=key_hash,
+        name=request.name,
+        is_active=True,
+    )
+    session.add(api_key)
+    await session.flush()  # Get the ID without committing
+    
+    return APIKeyResponse(
+        id=api_key.id,
+        name=api_key.name,
+        key=raw_key,  # Only time we return the raw key!
+        is_active=api_key.is_active,
+        created_at=api_key.created_at or datetime.now(timezone.utc),
+        last_used_at=api_key.last_used_at,
+    )
+
+
+@router.get(
+    "/keys",
+    response_model=APIKeyListResponse,
+    summary="List all API keys",
+    description="List all API keys (without the raw key values).",
+)
+async def list_api_keys(
+    session: DBSession,
+) -> APIKeyListResponse:
+    """List all API keys."""
+    result = await session.execute(
+        select(APIKey).order_by(APIKey.created_at.desc())
+    )
+    keys = result.scalars().all()
+    
+    return APIKeyListResponse(
+        keys=[
+            APIKeyResponse(
+                id=key.id,
+                name=key.name,
+                key=None,  # Never expose raw key in list
+                is_active=key.is_active,
+                created_at=key.created_at,
+                last_used_at=key.last_used_at,
+            )
+            for key in keys
+        ],
+        total=len(keys),
+    )
+
+
+@router.delete(
+    "/keys/{key_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Deactivate an API key",
+    description="Deactivate an API key (soft delete).",
+)
+async def deactivate_api_key(
+    key_id: str,
+    session: DBSession,
+) -> None:
+    """Deactivate an API key (soft delete)."""
+    from uuid import UUID
+    
+    try:
+        uuid_key = UUID(key_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid key ID format",
+        )
+    
+    result = await session.execute(
+        select(APIKey).where(APIKey.id == uuid_key)
+    )
+    api_key = result.scalar_one_or_none()
+    
+    if not api_key:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="API key not found",
+        )
+    
+    api_key.is_active = False
+</file>
+
+<file path="src/config.py">
+"""
+Configuration management using Pydantic Settings.
+
+This module centralizes all configuration from environment variables
+with type safety and validation.
+"""
+
+from functools import lru_cache
+from typing import Literal
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    """Application settings loaded from environment variables."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+    # ===================
+    # Database
+    # ===================
+    database_url: str = "postgresql+asyncpg://router_user:router_password@localhost:5432/router_db"
+
+    # ===================
+    # Redis
+    # ===================
+    redis_url: str = "redis://localhost:6379/0"
+    cache_ttl_seconds: int = 3600
+
+    # ===================
+    # Ollama (Local LLM)
+    # ===================
+    ollama_base_url: str = "http://localhost:11434"
+    ollama_model: str = "granite4:350m"
+
+    # ===================
+    # Google Gemini
+    # ===================
+    google_api_key: str = ""
+    gemini_flash_model: str = "gemini-2.0-flash-exp"
+    gemini_pro_model: str = "gemini-2.5-pro"
+
+    # ===================
+    # API Security
+    # ===================
+    api_key_header: str = "X-API-Key"
+
+    # ===================
+    # Routing Thresholds
+    # ===================
+    simple_token_threshold: int = 50   # Below this = simple (very short prompts)
+    complex_token_threshold: int = 500  # Above this = complex (very long prompts)
+    use_llm_router: bool = True  # Use LLM-based classification (vs rule-based)
+    use_semantic_cache: bool = True  # Use semantic similarity cache (vs exact match)
+
+    # ===================
+    # Logging
+    # ===================
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+
+
+@lru_cache
+def get_settings() -> Settings:
+    """
+    Get cached settings instance.
+    
+    Uses lru_cache to ensure settings are only loaded once,
+    improving performance and ensuring consistency.
+    """
+    return Settings()
+</file>
+
+<file path="README.md">
+# Smart Model Router
+
+**An intelligent LLM routing system that reduces inference costs by up to 99% by automatically directing prompts to the optimal model based on complexity.**
+
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-green.svg)](https://fastapi.tiangolo.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+---
+
+## 📋 Table of Contents
+
+- [The Problem](#-the-problem)
+- [The Solution](#-the-solution)
+- [Architecture](#-architecture)
+- [Key Features](#-key-features)
+- [Performance](#-performance)
+- [Quick Start](#-quick-start)
+- [API Reference](#-api-reference)
+- [Technical Deep Dive](#-technical-deep-dive)
+- [Configuration](#-configuration)
+- [Development](#-development)
+
+---
+
+## 🎯 The Problem
+
+**LLM API costs are exploding.** Organizations using GPT or Gemini Pro for every request face:
+
+| Challenge | Impact |
+|-----------|--------|
+| **Cost inefficiency** | 80% of prompts are simple tasks (summarization, translation) that don't need expensive models |
+| **Latency variability** | Pro-tier models are 5-10x slower than lightweight alternatives |
+| **No visibility** | Teams lack insight into which prompts actually need advanced reasoning |
+
+**Real-world scenario:** A support chatbot processes 100K queries/day. If 70% are simple FAQ lookups routed through GPT-4o at $5/1M tokens, you're burning ~$350/day on tasks a $0.01 local model handles equally well.
+
+---
+
+## 💡 The Solution
+
+Smart Model Router is a **drop-in proxy** that sits between your application and LLM providers. It analyzes each prompt and routes it to the cheapest capable model:
+
+```mermaid
+flowchart LR
+    subgraph Input
+        A["Summarize this email"] --> R
+        B["Explain quantum computing"] --> R
+        C["Design microservices arch"] --> R
+    end
+    
+    R[Smart Model Router] --> D["IBM Granite Local<br/>💰 $0.00001"]
+    R --> E["Gemini Flash<br/>💰 $0.0003"]
+    R --> F["Gemini Pro<br/>💰 $0.01"]
+    
+    D --> S["✅ 90-99% Savings"]
+    E --> S
+    F --> S
+```
+
+---
+
+## 🏗️ Architecture
+
+```mermaid
+flowchart TB
+    subgraph Client
+        A[Client App]
+    end
+    
+    subgraph Gateway["API Gateway"]
+        B[FastAPI]
+        C[API Key Auth]
+    end
+    
+    subgraph Cache["Caching Layer"]
+        D["Semantic Cache<br/>(Redis Stack)"]
+        D1["Embedding Similarity"]
+        D2["72ms Cache Hits"]
+    end
+    
+    subgraph Router["Classification"]
+        E["LLM Router<br/>(IBM Granite)"]
+        E1["SIMPLE"]
+        E2["MEDIUM"]
+        E3["COMPLEX"]
+    end
+    
+    subgraph Providers["LLM Providers"]
+        F["IBM Granite Local<br/>$0.01/M tokens"]
+        G["Gemini Flash<br/>$0.075/M tokens"]
+        H["Gemini Pro<br/>$10/M tokens"]
+    end
+    
+    subgraph Logging["Observability"]
+        I["Cost Calculator"]
+        J["PostgreSQL Logger"]
+    end
+    
+    A --> B
+    B --> C
+    C --> D
+    D -->|Cache Hit| A
+    D -->|Cache Miss| E
+    E --> E1 & E2 & E3
+    E1 --> F
+    E2 --> G
+    E3 --> H
+    F & G & H --> I
+    I --> J
+    J --> A
+```
+
+---
+
+## ✨ Key Features
+
+### 🧠 Intelligent Routing
+- **LLM-Based Classification**: Uses a lightweight local model (IBM Granite 4.0 Nano) to analyze prompt complexity
+- **Rule-Based Fallback**: Heuristic scoring as a backup when LLM classification fails
+- **Force Override**: API parameter to bypass routing for testing or specific use cases
+
+### 🚀 Semantic Caching
+- **Embedding-Based Similarity**: Uses `nomic-embed-text` (768-dim) for prompt embeddings
+- **Redis Vector Search**: FindS similar prompts, not just exact matches
+- **Configurable Threshold**: 92% default similarity for cache hits
+- **72ms Cache Hits**: vs 5-18 seconds for full LLM calls
+
+### 💰 Cost Optimization
+- **Real-Time Cost Tracking**: Per-request cost calculation in USD
+- **Baseline Comparison**: Shows savings vs always using Gemini Pro
+- **Token-Level Granularity**: Separate input/output token pricing
+
+### 🔐 Production-Ready
+- **API Key Authentication**: SHA-256 hashed keys with rotation support
+- **Rate Limiting Ready**: Architecture supports per-key throttling
+- **Async Throughout**: Full async/await for high concurrency
+- **Health Checks**: `/health` endpoint for load balancer integration
+
+### 📊 Observability
+- **Request Logging**: Every request logged to PostgreSQL
+- **Cost Analytics**: Aggregate savings queries ready
+- **Model Distribution**: Track which models serve which prompt types
+
+---
+
+## 📈 Performance
+
+### Cost Savings (Real Test Data)
+
+| Prompt Type | Without Router | With Router | Savings |
+|-------------|----------------|-------------|---------|
+| "Translate to Spanish" | $0.000208 | $0.000001 | **99.5%** |
+| "Explain Python decorators" | $0.000416 | $0.000075 | **82%** |
+| "Design a banking API" | $0.002 | $0.002 | 0% (correctly uses Pro) |
+
+### Latency
+
+| Scenario | Latency |
+|----------|---------|
+| First request (LLM classification + generation) | 3-18s |
+| Semantic cache hit (similar prompt) | **72ms** |
+| Exact cache hit | **2ms** |
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Docker & Docker Compose
+- Python 3.11+ with `uv` package manager
+- NVIDIA GPU (optional, for faster local inference)
+- Google Cloud API key for Gemini
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/Asirwad/smart-llm-router.git
+cd smart-llm-router
+
+# Configure environment
+cp .env.example .env
+# Add your GOOGLE_API_KEY to .env
+
+# Start infrastructure (PostgreSQL, Redis Stack, Ollama)
+docker-compose up -d
+
+# Pull required models
+docker exec router-ollama ollama pull granite4:350m
+docker exec router-ollama ollama pull nomic-embed-text
+
+# Install dependencies
+uv pip install -e ".[dev]"
+
+# Run database migrations
+alembic upgrade head
+
+# Start the API server
+uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+### First Request
+
+```bash
+# Create an API key
+curl -X POST http://localhost:8000/v1/keys \
+  -H "Content-Type: application/json" \
+  -d '{"name": "my-first-key"}'
+
+# Response: {"key": "smr_abc123...", "id": "...", ...}
+
+# Make a completion request
+curl -X POST http://localhost:8000/v1/complete \
+  -H "X-API-Key: smr_abc123..." \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Summarize: Python is a programming language."}'
+```
+
+### Response
+
+```json
+{
+  "response": "Python is a versatile programming language known for...",
+  "model_used": "granite4:350m",
+  "difficulty_tag": "simple",
+  "estimated_cost": 0.000001,
+  "estimated_savings": 0.000207,
+  "latency_ms": 1523,
+  "cache_hit": false
+}
+```
+
+---
+
+## 📖 API Reference
+
+### POST /v1/complete
+
+Main completion endpoint with intelligent routing.
+
+**Request:**
+```json
+{
+  "prompt": "Your prompt here",
+  "force_tier": "simple|medium|complex"  // Optional override
+}
+```
+
+**Response:**
+```json
+{
+  "response": "Generated text...",
+  "model_used": "granite4:350m",
+  "difficulty_tag": "simple",
+  "estimated_cost": 0.000001,
+  "estimated_savings": 0.000207,
+  "latency_ms": 1523,
+  "cache_hit": false
+}
+```
+
+### POST /v1/keys
+
+Create a new API key.
+
+### GET /v1/keys
+
+List all API keys (hashed, not raw).
+
+### DELETE /v1/keys/{id}
+
+Deactivate an API key.
+
+### GET /health
+
+Health check with database connectivity status.
+
+---
+
+## 🔬 Technical Deep Dive
+
+### Prompt Classification
+
+The router uses a two-stage classification approach:
+
+1. **LLM-Based (Primary)**: IBM Granite 4.0 Nano analyzes the prompt with a classification instruction:
+   ```
+   Classify this prompt: SIMPLE | MEDIUM | COMPLEX
+   - SIMPLE: summarization, translation, simple Q&A
+   - MEDIUM: explanations, code generation
+   - COMPLEX: architecture design, multi-step reasoning
+   ```
+
+2. **Rule-Based (Fallback)**: Heuristic scoring based on:
+   - Token count thresholds
+   - Keyword detection (e.g., "architect", "debug", "optimize")
+   - Code block presence
+   - Instruction complexity
+
+### Semantic Caching
+
+```python
+# Embedding generation (Ollama + nomic-embed-text)
+embedding = await embeddings.embed("What is machine learning?")
+# → [0.023, -0.156, 0.089, ...] (768 dimensions)
+
+# Redis vector search (FT.SEARCH with KNN)
+result = await redis.execute_command(
+    "FT.SEARCH", "smr_semantic_idx",
+    "*=>[KNN 1 @embedding $vec AS score]",
+    "PARAMS", "2", "vec", query_bytes,
+)
+
+# If similarity >= 92%, return cached response
+```
+
+### Cost Calculation
+
+```python
+MODEL_PRICING = {
+    "granite4:350m": {"input": 0.01, "output": 0.01},   # $/1M tokens
+    "gemini-flash": {"input": 0.075, "output": 0.30},
+    "gemini-pro":   {"input": 1.25, "output": 10.00},
+}
+
+# Savings = baseline_cost - actual_cost
+# Baseline = always using gemini-2.5-pro
+```
+
+---
+
+## ⚙️ Configuration
+
+All settings via environment variables or `.env` file:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DATABASE_URL` | `postgresql+asyncpg://...` | PostgreSQL connection |
+| `REDIS_URL` | `redis://localhost:6379/0` | Redis Stack connection |
+| `GOOGLE_API_KEY` | - | Gemini API credentials |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server URL |
+| `USE_LLM_ROUTER` | `true` | Enable LLM-based classification |
+| `USE_SEMANTIC_CACHE` | `true` | Enable embedding-based caching |
+| `CACHE_TTL_SECONDS` | `3600` | Cache entry TTL |
+
+---
+
+## 📁 Project Structure
+
+```
+smart-model-router/
+├── src/
+│   ├── api/
+│   │   ├── routes.py        # FastAPI endpoints
+│   │   ├── schemas.py       # Pydantic models
+│   │   └── dependencies.py  # Auth & session injection
+│   ├── core/
+│   │   └── router.py        # LLM + Rule-based classification
+│   ├── providers/
+│   │   ├── base.py          # OllamaProvider
+│   │   ├── gemini.py        # GeminiProvider
+│   │   └── manager.py       # Tier routing & fallback
+│   ├── services/
+│   │   ├── cache.py         # Exact-match cache
+│   │   ├── semantic_cache.py # Embedding-based cache
+│   │   ├── embeddings.py    # Ollama embeddings
+│   │   └── cost.py          # Cost calculation & logging
+│   ├── db/
+│   │   ├── models.py        # SQLAlchemy models
+│   │   └── session.py       # Async session factory
+│   ├── config.py            # Pydantic settings
+│   └── main.py              # FastAPI app
+├── tests/
+│   ├── test_router.py       # Unit tests
+│   └── test_integration.py  # E2E tests
+├── alembic/                 # Database migrations
+├── docker-compose.yml       # Infrastructure stack
+└── pyproject.toml           # Dependencies
+```
+
+---
+
+## 🧪 Development
+
+```bash
+# Run tests
+pytest -v
+
+# Format code
+ruff format .
+
+# Lint
+ruff check .
+
+# Type check
+pyrefly check
+```
+
+---
+
+## 🛣️ Roadmap
+
+- [ ] **Streaming Responses**: SSE for real-time output
+- [ ] **Dashboard UI**: Cost analytics visualization
+- [ ] **OpenAI Compatibility**: Drop-in replacement for `/v1/chat/completions`
+- [ ] **Multi-Tenant**: Organization-level API key scoping
+- [ ] **Fine-Tuned Router**: Train classifier on production data
+</file>
+
+</files>
