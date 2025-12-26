@@ -38,6 +38,35 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 target_metadata = Base.metadata
 
+
+# ===================
+# CRITICAL: Table filtering for shared database
+# ===================
+# Since we share the database with Smart Model Router, we MUST tell Alembic
+# to ONLY manage tables that belong to this project.
+# Without this, autogenerate would try to DROP the Smart Model Router tables!
+
+# Tables that belong to THIS project (Execution Engine)
+OUR_TABLES = {"agent_runs", "agent_steps", "agent_alembic_version"}
+
+
+def include_object(object, name, type_, reflected, compare_to):
+    """
+    Filter function for Alembic autogenerate.
+    
+    Returns True if the object should be included in migrations.
+    Returns False if the object should be ignored.
+    
+    This is ESSENTIAL when sharing a database between multiple projects!
+    """
+    if type_ == "table":
+        # Only include tables that belong to this project
+        return name in OUR_TABLES
+    
+    # Include all other objects (indexes, constraints) if their parent table is ours
+    return True
+
+
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
@@ -62,6 +91,8 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        version_table="agent_alembic_version",
+        include_object=include_object,  # Filter to only manage our tables!
     )
 
     with context.begin_transaction():
@@ -70,7 +101,14 @@ def run_migrations_offline() -> None:
 
 def do_run_migrations(connection: Connection) -> None:
     """Helper to run migrations with a connection."""
-    context.configure(connection=connection, target_metadata=target_metadata)
+    # Use a SEPARATE version table for this project
+    # This allows multiple Alembic projects to share the same database
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        version_table="agent_alembic_version",
+        include_object=include_object,  # Filter to only manage our tables!
+    )
 
     with context.begin_transaction():
         context.run_migrations()

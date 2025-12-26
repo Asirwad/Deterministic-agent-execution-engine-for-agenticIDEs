@@ -1,18 +1,14 @@
-"""
-Temporary script to clear stale alembic_version.
-Run this once, then delete.
-"""
-
+"""Clear agent_alembic_version table before fresh migration."""
 import asyncio
 from sqlalchemy import text
 from src.db.session import get_session_context
 
 
-async def clear_alembic_version():
+async def clear_agent_alembic():
     async with get_session_context() as session:
-        await session.execute(text("DELETE FROM alembic_version"))
-        print("✅ Cleared alembic_version table")
+        await session.execute(text("DELETE FROM agent_alembic_version"))
+        print("✅ Cleared agent_alembic_version table")
 
 
 if __name__ == "__main__":
-    asyncio.run(clear_alembic_version())
+    asyncio.run(clear_agent_alembic())
