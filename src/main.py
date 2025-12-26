@@ -81,13 +81,28 @@ async def health_check():
     Returns the current status of the engine and its dependencies.
     Used by container orchestrators and load balancers.
     """
+    from sqlalchemy import text
+    from src.db.session import async_session_factory
+    
     settings = get_settings()
     
-    # TODO: Add actual health checks for DB and Smart Router
+    # Check database connectivity
+    db_status = "disconnected"
+    try:
+        async with async_session_factory() as session:
+            await session.execute(text("SELECT 1"))
+            db_status = "connected"
+    except Exception as e:
+        db_status = f"error: {str(e)}"
+    
+    # Determine overall status
+    overall_status = "healthy" if db_status == "connected" else "degraded"
+    
     return {
-        "status": "healthy",
+        "status": overall_status,
         "service": "deterministic-agent-engine",
         "version": "0.1.0",
+        "database": db_status,
         "smart_router_url": settings.smart_router_url,
         "workspace_root": str(settings.workspace_path),
     }
