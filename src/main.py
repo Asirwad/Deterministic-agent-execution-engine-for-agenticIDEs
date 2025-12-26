@@ -16,6 +16,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.config import get_settings
+from src.db.session import init_db, close_db
 
 
 @asynccontextmanager
@@ -24,19 +25,19 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     Application lifespan manager.
     """
     settings = get_settings()
-    print(f"🚀 Starting Deterministic Agent Execution Engine on port {settings.server_port}")
-    print(f"📁 Workspace root: {settings.workspace_path}")
-    print(f"🔗 Smart Model Router: {settings.smart_router_url}")
+    print(f"    🚀  Starting Deterministic Agent Execution Engine on port {settings.server_port}")
+    print(f"    📁  Workspace root: {settings.workspace_path}")
+    print(f"    📊  Smart Model Router: {settings.smart_router_url}")
     
-    # TODO: Initialize database connection
-    # await init_db()
+    # Initialize database connection
+    await init_db()
     
     yield  # Application runs here
     
     # Shutdown
     print("👋 Shutting down Execution Engine...")
-    # TODO: Close database connections
-    # await close_db()
+    # Close database connections
+    await close_db()
 
 
 # Create FastAPI application
