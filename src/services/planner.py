@@ -43,34 +43,30 @@ class PlannerService:
     4. Returns step definitions ready to be added to a run
     """
     
-    SYSTEM_PROMPT = """You are an expert software engineering AI that creates execution plans.
+    SYSTEM_PROMPT = """You are a JSON-only API that generates execution plans.
 
-Given a goal, generate a plan as a JSON array of steps. Each step must have:
-- "step_type": One of "read_file", "analyze", "edit_file", "run_command", "summarize"
-- "input": Object with step-specific parameters
-- "description": Brief description of what this step does
+OUTPUT FORMAT: You MUST output ONLY a valid JSON array. No text before or after.
 
-Step type requirements:
+Each step in the array must have:
+- "step_type": One of "read_file", "analyze", "edit_file", "run_command", "summarize"  
+- "input": Object with parameters for that step type
+- "description": Brief description
+
+Step input requirements:
 - read_file: {"path": "relative/path/to/file"}
 - analyze: {"instruction": "What to analyze"}
-- edit_file: {"path": "file", "new_content": "full new file content"}
-- run_command: {"command": "shell command", "working_dir": "."}
+- edit_file: {"path": "file", "new_content": "full content"}
+- run_command: {"command": "command", "working_dir": "."}
 - summarize: {"instruction": "What to summarize"}
 
-Guidelines:
-1. Start by reading relevant files to understand the codebase
-2. Use analyze steps to reason about what changes are needed
-3. edit_file and run_command require human approval - use sparingly
-4. End with a summarize step explaining what was done
-5. Keep plans focused and minimal (usually 3-7 steps)
+RULES:
+1. Start by reading relevant files
+2. Use analyze for reasoning
+3. Keep plans to 3-5 steps
+4. Output ONLY the JSON array, nothing else
 
-IMPORTANT: Respond with ONLY a JSON array. No markdown, no explanation.
-
-Example output:
-[
-  {"step_type": "read_file", "input": {"path": "src/main.py"}, "description": "Read the main file"},
-  {"step_type": "analyze", "input": {"instruction": "Identify issues in the code"}, "description": "Analyze for problems"}
-]"""
+CORRECT OUTPUT EXAMPLE:
+[{"step_type":"read_file","input":{"path":"test.py"},"description":"Read file"},{"step_type":"analyze","input":{"instruction":"Analyze the code"},"description":"Analyze"}]"""
     
     def __init__(
         self,
@@ -94,18 +90,18 @@ Example output:
         additional_context: Optional[str] = None,
     ) -> str:
         """Build the planning prompt."""
-        prompt_parts = [f"## Goal\n{goal}"]
+        prompt_parts = [f"Goal: {goal}"]
         
         if workspace_files:
-            files_list = "\n".join(f"- {f}" for f in workspace_files[:20])
-            prompt_parts.append(f"## Available Files\n{files_list}")
+            files_list = ", ".join(workspace_files[:10])
+            prompt_parts.append(f"Files: {files_list}")
         
         if additional_context:
-            prompt_parts.append(f"## Additional Context\n{additional_context}")
+            prompt_parts.append(f"Context: {additional_context}")
         
-        prompt_parts.append("\n## Task\nGenerate a step-by-step plan to achieve this goal.")
+        prompt_parts.append("Generate the JSON plan array:")
         
-        return "\n\n".join(prompt_parts)
+        return "\n".join(prompt_parts)
     
     def _parse_plan(self, response: str) -> list[dict]:
         """
@@ -120,15 +116,19 @@ Example output:
         Raises:
             PlannerError: If response cannot be parsed
         """
-        # Try to extract JSON from the response
         text = response.strip()
         
         # Remove markdown code blocks if present
-        if text.startswith("```"):
-            # Find the JSON content
+        if "```" in text:
             match = re.search(r"```(?:json)?\s*([\s\S]*?)```", text)
             if match:
                 text = match.group(1).strip()
+        
+        # Try to find JSON array in the response
+        # Look for [...] pattern
+        array_match = re.search(r'\[[\s\S]*\]', text)
+        if array_match:
+            text = array_match.group(0)
         
         try:
             plan = json.loads(text)
