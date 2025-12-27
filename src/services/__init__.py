@@ -5,8 +5,12 @@ Contains services like WorkspaceManager, SmartRouterClient, etc.
 """
 
 from src.services.workspace import WorkspaceManager, WorkspaceSecurityError
+from src.services.smart_router import SmartRouterClient, SmartRouterError, LLMResponse
 
 __all__ = [
     "WorkspaceManager",
     "WorkspaceSecurityError",
+    "SmartRouterClient",
+    "SmartRouterError",
+    "LLMResponse",
 ]
