@@ -45,6 +45,32 @@ class CreateStepRequest(BaseModel):
     )
 
 
+class PlanRequest(BaseModel):
+    """Request to generate a plan from a goal."""
+    goal: str = Field(
+        ...,
+        description="The goal to create a plan for",
+        min_length=1,
+        examples=["Add error handling to the UserService class"],
+    )
+    workspace_files: Optional[list[str]] = Field(
+        default=None,
+        description="Optional list of relevant files for context",
+    )
+    additional_context: Optional[str] = Field(
+        default=None,
+        description="Optional additional context for planning",
+    )
+    auto_add_steps: bool = Field(
+        default=False,
+        description="If True and run_id provided, automatically add steps to run",
+    )
+    run_id: Optional[UUID] = Field(
+        default=None,
+        description="Optional run ID to add steps to",
+    )
+
+
 # ===================
 # Response Schemas
 # ===================
@@ -131,6 +157,28 @@ class ApprovalResponse(BaseModel):
     run_id: UUID
     step_id: UUID
     message: str
+
+
+class PlanResponse(BaseModel):
+    """Response from planning endpoint."""
+    success: bool
+    steps: list[dict] = Field(
+        ...,
+        description="Generated steps ready to be added to a run",
+    )
+    cost: dict = Field(
+        ...,
+        description="Cost of the planning LLM call",
+        examples=[{"model": "gemini-flash", "estimated_cost": 0.0002}],
+    )
+    run_id: Optional[UUID] = Field(
+        default=None,
+        description="Run ID if steps were auto-added",
+    )
+    steps_added: int = Field(
+        default=0,
+        description="Number of steps added to run (if auto_add_steps=True)",
+    )
 
 
 class ErrorResponse(BaseModel):

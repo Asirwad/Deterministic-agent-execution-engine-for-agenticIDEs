@@ -419,3 +419,92 @@ async def get_run_cost(
         total_tokens=cost_info["total_tokens"],
         steps=cost_info["steps"],
     )
+
+
+# ===================
+# Create a separate router for planning
+# ===================
+from src.api.schemas import PlanRequest, PlanResponse
+from src.services.planner import PlannerService, PlannerError
+
+plan_router = APIRouter(prefix="/v1", tags=["Planning"])
+
+
+@plan_router.post(
+    "/plan",
+    response_model=PlanResponse,
+    responses={400: {"model": ErrorResponse}},
+)
+async def create_plan(
+    request: PlanRequest,
+    session: AsyncSession = Depends(get_session),
+    workspace: WorkspaceManager = Depends(get_workspace),
+    router_client: SmartRouterClient = Depends(get_router_client),
+):
+    """
+    Generate a plan of steps from a goal using LLM.
+    
+    This analyzes the goal and creates a structured list of steps
+    that can be added to a run. Optionally auto-adds steps to an existing run.
+    """
+    planner = PlannerService(router_client, workspace)
+    
+    try:
+        steps, llm_response = await planner.create_plan(
+            goal=request.goal,
+            workspace_files=request.workspace_files,
+            additional_context=request.additional_context,
+        )
+    except PlannerError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    
+    steps_added = 0
+    run_id = request.run_id
+    
+    # Auto-add steps if requested
+    if request.auto_add_steps and request.run_id:
+        from src.engine import ExecutionEngine, RunNotFoundError
+        
+        engine = ExecutionEngine(session, workspace, router_client)
+        
+        try:
+            run = await engine.get_run(request.run_id)
+        except RunNotFoundError:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Run not found: {request.run_id}",
+            )
+        
+        # Add each step
+        for step_def in steps:
+            step = Step(
+                run_id=run.id,
+                step_number=len(run.steps) + 1,
+                step_type=StepType(step_def["step_type"]),
+                status=StepStatus.PENDING,
+                input=step_def["input"],
+            )
+            session.add(step)
+            run.steps.append(step)
+            steps_added += 1
+        
+        if run.status == RunStatus.CREATED:
+            run.status = RunStatus.PLANNED
+        
+        await session.commit()
+    
+    return PlanResponse(
+        success=True,
+        steps=steps,
+        cost={
+            "model": llm_response.model,
+            "prompt_tokens": llm_response.prompt_tokens,
+            "completion_tokens": llm_response.completion_tokens,
+            "estimated_cost": llm_response.estimated_cost,
+        },
+        run_id=run_id,
+        steps_added=steps_added,
+    )

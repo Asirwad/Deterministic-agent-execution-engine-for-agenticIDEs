@@ -126,6 +126,7 @@ async def root():
             "approve": "POST /v1/agent-runs/{run_id}/steps/{step_id}/approve",
             "skip": "POST /v1/agent-runs/{run_id}/steps/{step_id}/skip",
             "cost": "GET /v1/agent-runs/{run_id}/cost",
+            "plan": "POST /v1/plan",
         },
     }
 
@@ -134,5 +135,7 @@ async def root():
 # API Routers
 # ===================
 from src.api.routes import router as agent_runs_router
+from src.api.routes import plan_router
 
 app.include_router(agent_runs_router)
+app.include_router(plan_router)
