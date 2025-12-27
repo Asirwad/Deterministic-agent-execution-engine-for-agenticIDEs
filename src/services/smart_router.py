@@ -162,14 +162,25 @@ class SmartRouterClient:
             
             data = response.json()
             
+            # Smart Router response format:
+            # {
+            #     "response": "The LLM response text",
+            #     "model_used": "gemini-2.0-flash-exp",
+            #     "difficulty_tag": "medium",
+            #     "estimated_cost": 0.000001,
+            #     "estimated_savings": 0.000035,
+            #     "latency_ms": 4236,
+            #     "cache_hit": false
+            # }
+            
             return LLMResponse(
-                content=data.get("content", ""),
-                model=data.get("model", "unknown"),
-                prompt_tokens=data.get("prompt_tokens", 0),
-                completion_tokens=data.get("completion_tokens", 0),
+                content=data.get("response", ""),  # 'response' not 'content'
+                model=data.get("model_used", "unknown"),  # 'model_used' not 'model'
+                prompt_tokens=0,  # Not provided by Smart Router
+                completion_tokens=0,  # Not provided by Smart Router
                 estimated_cost=data.get("estimated_cost", 0.0),
-                cached=data.get("cached", False),
-                latency_ms=latency_ms,
+                cached=data.get("cache_hit", False),  # 'cache_hit' not 'cached'
+                latency_ms=data.get("latency_ms", latency_ms),
             )
         
         except httpx.TimeoutException:
