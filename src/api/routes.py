@@ -501,9 +501,8 @@ async def create_plan(
         steps=steps,
         cost={
             "model": llm_response.model,
-            "prompt_tokens": llm_response.prompt_tokens,
-            "completion_tokens": llm_response.completion_tokens,
             "estimated_cost": llm_response.estimated_cost,
+            "latency_ms": llm_response.latency_ms,
         },
         run_id=run_id,
         steps_added=steps_added,

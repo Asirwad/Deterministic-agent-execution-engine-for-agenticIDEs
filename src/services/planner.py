@@ -23,7 +23,7 @@ import re
 from typing import Optional
 
 from src.db.models import StepType
-from src.services.smart_router import SmartRouterClient, SmartRouterError, LLMResponse
+from src.services.smart_router import SmartRouterClient, SmartRouterError, StructuredLLMResponse
 from src.services.workspace import WorkspaceManager
 
 
@@ -36,37 +36,50 @@ class PlannerService:
     """
     Service for converting goals into executable plans.
     
-    The planner:
-    1. Analyzes the goal and workspace context
-    2. Generates a structured plan of steps
-    3. Validates that each step has correct type and input
-    4. Returns step definitions ready to be added to a run
+    Uses the Smart Router's /v1/structure endpoint for guaranteed JSON output
+    conforming to our step schema. This eliminates prompt engineering complexity.
     """
     
-    SYSTEM_PROMPT = """You are a JSON-only API that generates execution plans.
+    # JSON Schema for step plans - ensures LLM returns exactly this structure
+    PLAN_SCHEMA = {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {
+                "step_type": {
+                    "type": "string",
+                    "enum": ["read_file", "analyze", "edit_file", "run_command", "summarize"],
+                    "description": "Type of step to execute"
+                },
+                "input": {
+                    "type": "object",
+                    "description": "Step-specific parameters"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "Brief description of what this step does"
+                }
+            },
+            "required": ["step_type", "input", "description"]
+        }
+    }
+    
+    SYSTEM_PROMPT = """You are a software engineering assistant that creates execution plans.
 
-OUTPUT FORMAT: You MUST output ONLY a valid JSON array. No text before or after.
+Given a goal, generate a plan as a JSON array of steps. Keep plans focused and minimal (3-7 steps).
 
-Each step in the array must have:
-- "step_type": One of "read_file", "analyze", "edit_file", "run_command", "summarize"  
-- "input": Object with parameters for that step type
-- "description": Brief description
+Step types and their input requirements:
+- read_file: {"path": "relative/path/to/file"} - Read file contents
+- analyze: {"instruction": "what to analyze"} - Think through a problem
+- edit_file: {"path": "file", "new_content": "complete content"} - Write/modify file
+- run_command: {"command": "shell command", "working_dir": "."} - Execute command
+- summarize: {"instruction": "what to summarize"} - Provide summary
 
-Step input requirements:
-- read_file: {"path": "relative/path/to/file"}
-- analyze: {"instruction": "What to analyze"}
-- edit_file: {"path": "file", "new_content": "full content"}
-- run_command: {"command": "command", "working_dir": "."}
-- summarize: {"instruction": "What to summarize"}
-
-RULES:
-1. Start by reading relevant files
-2. Use analyze for reasoning
-3. Keep plans to 3-5 steps
-4. Output ONLY the JSON array, nothing else
-
-CORRECT OUTPUT EXAMPLE:
-[{"step_type":"read_file","input":{"path":"test.py"},"description":"Read file"},{"step_type":"analyze","input":{"instruction":"Analyze the code"},"description":"Analyze"}]"""
+Guidelines:
+1. Start by reading relevant files to understand context
+2. Use analyze steps to reason about changes needed
+3. For simple additions, use edit_file with the new content
+4. End with a summarize step"""
     
     def __init__(
         self,
@@ -90,22 +103,24 @@ CORRECT OUTPUT EXAMPLE:
         additional_context: Optional[str] = None,
     ) -> str:
         """Build the planning prompt."""
-        prompt_parts = [f"Goal: {goal}"]
+        parts = [f"Goal: {goal}"]
         
         if workspace_files:
-            files_list = ", ".join(workspace_files[:10])
-            prompt_parts.append(f"Files: {files_list}")
+            parts.append(f"\nRelevant files: {', '.join(workspace_files[:10])}")
         
         if additional_context:
-            prompt_parts.append(f"Context: {additional_context}")
+            parts.append(f"\nContext: {additional_context}")
         
-        prompt_parts.append("Generate the JSON plan array:")
+        parts.append("\nCreate a step-by-step plan to accomplish this goal.")
         
-        return "\n".join(prompt_parts)
+        return "".join(parts)
     
     def _parse_plan(self, response: str) -> list[dict]:
         """
         Parse the LLM response into step definitions.
+        
+        Since we use the output prefix technique (prompt ends with '['),
+        the LLM response continues from there. We need to prepend '[' if missing.
         
         Args:
             response: Raw LLM response text
@@ -124,11 +139,23 @@ CORRECT OUTPUT EXAMPLE:
             if match:
                 text = match.group(1).strip()
         
-        # Try to find JSON array in the response
-        # Look for [...] pattern
-        array_match = re.search(r'\[[\s\S]*\]', text)
-        if array_match:
-            text = array_match.group(0)
+        # Handle output prefix technique - LLM continues after our '['
+        # So response might start with '{' instead of '['
+        if text.startswith("{") or text.startswith("\n"):
+            text = "[" + text
+        
+        # Ensure text starts with '[' and ends with ']'
+        if not text.startswith("["):
+            # Try to find JSON array in the response
+            array_match = re.search(r'\[[\s\S]*\]', text)
+            if array_match:
+                text = array_match.group(0)
+            else:
+                raise PlannerError(f"Could not find JSON array in response: {text[:200]}")
+        
+        # Ensure proper closing
+        if not text.rstrip().endswith("]"):
+            text = text.rstrip() + "]"
         
         try:
             plan = json.loads(text)
@@ -210,9 +237,12 @@ CORRECT OUTPUT EXAMPLE:
         goal: str,
         workspace_files: Optional[list[str]] = None,
         additional_context: Optional[str] = None,
-    ) -> tuple[list[dict], LLMResponse]:
+    ) -> tuple[list[dict], StructuredLLMResponse]:
         """
         Create a plan to achieve the given goal.
+        
+        Uses the Smart Router's /v1/structure endpoint for guaranteed JSON output
+        conforming to our PLAN_SCHEMA. No JSON parsing needed.
         
         Args:
             goal: The goal to accomplish
@@ -220,26 +250,31 @@ CORRECT OUTPUT EXAMPLE:
             additional_context: Optional additional context
         
         Returns:
-            Tuple of (validated steps list, LLM response for cost tracking)
+            Tuple of (validated steps list, response for cost tracking)
         
         Raises:
-            PlannerError: If planning fails
+            PlannerError: If planning or validation fails
             SmartRouterError: If LLM call fails
         """
         prompt = self._build_prompt(goal, workspace_files, additional_context)
         
         try:
-            response = await self.router.complete(
+            # Use structured() for guaranteed JSON conforming to schema
+            response = await self.router.structured(
                 prompt=prompt,
+                json_schema=self.PLAN_SCHEMA,
                 system_prompt=self.SYSTEM_PROMPT,
             )
         except SmartRouterError as e:
             raise PlannerError(f"LLM call failed: {e}")
         
-        # Parse the response
-        raw_steps = self._parse_plan(response.content)
+        # response.data is already parsed JSON guaranteed to be an array
+        # Just validate the step contents
+        raw_steps = response.data
         
-        # Validate each step
+        if not isinstance(raw_steps, list):
+            raise PlannerError(f"Plan must be a list, got: {type(raw_steps).__name__}")
+        
         validated_steps = []
         for i, step in enumerate(raw_steps):
             validated = self._validate_step(step, i + 1)

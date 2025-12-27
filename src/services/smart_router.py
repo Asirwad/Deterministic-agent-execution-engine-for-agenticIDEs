@@ -10,12 +10,14 @@ The Smart Model Router handles:
 - Caching (exact and semantic)
 - Retry and fallback logic
 
-This client just needs to call /v1/complete and handle the response.
+This client provides two methods:
+- complete(): Free-form text completion via /v1/complete
+- structured(): Guaranteed JSON output via /v1/structure
 """
 
 import time
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Optional, Union
 
 import httpx
 
@@ -45,6 +47,26 @@ class LLMResponse:
     completion_tokens: int
     estimated_cost: float
     cached: bool = False
+    latency_ms: int = 0
+
+
+@dataclass
+class StructuredLLMResponse:
+    """
+    Response from a structured JSON request.
+    
+    This is our internal representation, parsed from the Smart Model Router's
+    StructuredResponse schema from /v1/structure endpoint.
+    
+    Attributes:
+        data: The structured JSON data (already parsed)
+        model: Which model was used
+        estimated_cost: Cost in USD for this request
+        latency_ms: Round-trip time for the request
+    """
+    data: Union[dict, list]
+    model: str
+    estimated_cost: float
     latency_ms: int = 0
 
 
@@ -218,6 +240,96 @@ class SmartRouterClient:
         except httpx.RequestError as e:
             raise SmartRouterError(
                 f"Cannot reach Smart Router: {str(e)}"
+            )
+    
+    async def structured(
+        self,
+        prompt: str,
+        json_schema: dict,
+        system_prompt: Optional[str] = None,
+    ) -> StructuredLLMResponse:
+        """
+        Send a structured output request to the Smart Model Router.
+        
+        Uses the /v1/structure endpoint which guarantees JSON output
+        conforming to the provided schema using Gemini's responseSchema feature.
+        
+        Args:
+            prompt: The user prompt to send
+            json_schema: JSON Schema that the response must conform to
+            system_prompt: Optional system prompt for context
+        
+        Returns:
+            StructuredLLMResponse with parsed data and cost info
+        
+        Raises:
+            SmartRouterError: If the request fails
+        
+        Example:
+            response = await client.structured(
+                prompt="Create a plan to add a factorial function",
+                json_schema={
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "step_type": {"type": "string"},
+                            "input": {"type": "object"},
+                            "description": {"type": "string"}
+                        },
+                        "required": ["step_type", "input", "description"]
+                    }
+                }
+            )
+            # response.data is guaranteed to match the schema
+        """
+        client = await self._get_client()
+        
+        # Build request payload matching StructuredRequest schema
+        payload = {
+            "prompt": prompt,
+            "json_schema": json_schema,
+        }
+        if system_prompt:
+            payload["system_prompt"] = system_prompt
+        
+        start_time = time.perf_counter()
+        
+        try:
+            response = await client.post("/v1/structure", json=payload)
+            latency_ms = int((time.perf_counter() - start_time) * 1000)
+            
+            if response.status_code != 200:
+                error_detail = response.text
+                raise SmartRouterError(
+                    f"Smart Router /structure returned {response.status_code}: {error_detail}"
+                )
+            
+            data = response.json()
+            
+            # StructuredResponse format:
+            # {
+            #     "data": [...] or {...},  # The structured JSON
+            #     "model_used": "gemini-2.0-flash-exp",
+            #     "estimated_cost": 0.0001,
+            #     "latency_ms": 2500
+            # }
+            
+            return StructuredLLMResponse(
+                data=data.get("data", {}),
+                model=data.get("model_used", "unknown"),
+                estimated_cost=data.get("estimated_cost", 0.0),
+                latency_ms=data.get("latency_ms", latency_ms),
+            )
+        
+        except httpx.TimeoutException:
+            raise SmartRouterError(
+                f"Structured request timed out after {self.timeout}s"
+            )
+        
+        except httpx.RequestError as e:
+            raise SmartRouterError(
+                f"Failed to connect to Smart Router at {self.base_url}: {str(e)}"
             )
     
     def __repr__(self) -> str:
