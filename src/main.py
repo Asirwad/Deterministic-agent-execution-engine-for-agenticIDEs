@@ -119,7 +119,13 @@ async def root():
         "docs": "/docs",
         "health": "/health",
         "endpoints": {
-            "agent_runs": "/v1/agent-runs (coming soon)",
+            "create_run": "POST /v1/agent-runs",
+            "get_run": "GET /v1/agent-runs/{run_id}",
+            "add_step": "POST /v1/agent-runs/{run_id}/steps",
+            "execute": "POST /v1/agent-runs/{run_id}/execute",
+            "approve": "POST /v1/agent-runs/{run_id}/steps/{step_id}/approve",
+            "skip": "POST /v1/agent-runs/{run_id}/steps/{step_id}/skip",
+            "cost": "GET /v1/agent-runs/{run_id}/cost",
         },
     }
 
@@ -127,5 +133,6 @@ async def root():
 # ===================
 # API Routers
 # ===================
-# We'll add these as we build them:
-# app.include_router(agent_runs_router, prefix="/v1")
+from src.api.routes import router as agent_runs_router
+
+app.include_router(agent_runs_router)
