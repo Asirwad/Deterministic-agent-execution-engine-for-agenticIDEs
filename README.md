@@ -81,7 +81,7 @@ stateDiagram-v2
 
 - Python 3.11+
 - PostgreSQL
-- [Smart Model Router](https://github.com/Asirwad/smart-model-router) on port 8000
+- [Smart Model Router](https://github.com/Asirwad/smart-llm-router) on port 8000
 
 ### Installation
 
