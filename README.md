@@ -1,17 +1,34 @@
 # Deterministic Agent Execution Engine
 
-A proof-of-concept execution engine that breaks down AI agent tasks into discrete, auditable steps with optional human approval.
+A minimal state machine implementation for AI agent execution, built to understand the internals of agentic systems for future work on an **Agentic-first IDE**.
 
-## Overview
+## Why This Exists
 
-This project explores an approach to AI agent execution where:
+Modern AI coding assistants (Cursor, Windsurf, etc.) execute agent workflows internally but don't expose how. This project is an exploration of:
 
-- Tasks are decomposed into individual **steps** (read file, analyze, edit, etc.)
-- Each step is logged with inputs, outputs, and costs
-- Dangerous operations (file edits, commands) require approval before execution
-- All execution happens within a sandboxed workspace
+- How to decompose AI tasks into **discrete, trackable steps**
+- How to implement **human-in-the-loop approval** for dangerous operations
+- How to build **auditable execution** with full input/output logging
+- How state machines work in agentic contexts
 
-This is a **learning project / MVP** - not production-ready software.
+### Why Not LangGraph?
+
+Tools like LangGraph are powerful but introduce vendor lock-in. Cursor and Windsurf notably avoid external agent frameworks to maintain control over their execution model. This project takes the same approach - a minimal, dependency-light implementation to understand the fundamentals.
+
+## What It Does
+
+```
+Goal: "Add a factorial function to utils.py"
+         ↓
+   [Planner Service]
+         ↓
+Step 1: read_file(utils.py)      → executed automatically
+Step 2: analyze("where to add")  → executed automatically  
+Step 3: edit_file(utils.py, ...) → ⚠️ requires approval
+Step 4: summarize("changes")     → executed automatically
+```
+
+Each step is logged with inputs, outputs, timing, and LLM costs.
 
 ## Architecture
 
@@ -28,21 +45,35 @@ flowchart LR
 
 | Component | Description |
 |-----------|-------------|
-| **API Layer** | FastAPI endpoints for runs, steps, planning |
-| **Execution Engine** | Orchestrates step execution and state management |
+| **Execution Engine** | State machine that orchestrates step execution |
 | **Step Executors** | Individual handlers for each step type |
 | **Workspace Manager** | Sandboxes file operations to a directory |
 | **Planner Service** | Converts goals into step plans via LLM |
 
 ## Step Types
 
-| Type | What it does | Needs Approval |
-|------|--------------|----------------|
-| `read_file` | Read a file from workspace | No |
-| `analyze` | Ask LLM to reason about something | No |
-| `edit_file` | Create or modify a file | Yes |
-| `run_command` | Execute a shell command | Yes |
-| `summarize` | Generate a summary | No |
+| Type | Purpose | Approval Required |
+|------|---------|-------------------|
+| `read_file` | Read file contents | No |
+| `analyze` | LLM reasoning | No |
+| `edit_file` | Create/modify files | **Yes** |
+| `run_command` | Shell execution | **Yes** |
+| `summarize` | Generate summary | No |
+
+## State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> CREATED
+    CREATED --> PLANNED: add steps
+    PLANNED --> RUNNING: execute
+    RUNNING --> RUNNING: next step (safe)
+    RUNNING --> AWAITING_APPROVAL: next step (dangerous)
+    AWAITING_APPROVAL --> RUNNING: approved
+    AWAITING_APPROVAL --> RUNNING: rejected (skip)
+    RUNNING --> COMPLETED: all steps done
+    RUNNING --> FAILED: error
+```
 
 ## Setup
 
@@ -50,62 +81,46 @@ flowchart LR
 
 - Python 3.11+
 - PostgreSQL
-- [Smart Model Router](https://github.com/yourusername/smart-model-router) running on port 8000
+- [Smart Model Router](https://github.com/Asirwad/smart-model-router) on port 8000
 
 ### Installation
 
 ```bash
-# Clone and setup
-git clone https://github.com/yourusername/deterministic-agent-engine.git
-cd deterministic-agent-engine
+git clone https://github.com/Asirwad/Dterministic-agent-execution-engine-for-agenticIDEs
+cd Deterministic-agent-execution-engine-for-agenticIDEs
+
 python -m venv .venv
 .venv\Scripts\activate  # Windows
 
-# Install
 pip install -e .
-
-# Configure
-cp .env.example .env
-# Edit .env with your database URL and Smart Router API key
-
-# Database
+cp .env.example .env    # Configure database + API keys
 alembic upgrade head
-
-# Run
 uvicorn src.main:app --reload --port 8002
 ```
 
 ## Usage
 
-### 1. Create a Run
+### Create and Execute a Run
 
 ```bash
+# 1. Create run
 curl -X POST http://localhost:8002/v1/agent-runs \
   -H "Content-Type: application/json" \
-  -d '{"goal": "Add a function to utils.py", "workspace_path": "workspace"}'
-```
+  -d '{"goal": "Review code quality", "workspace_path": "workspace"}'
 
-### 2. Add Steps
-
-```bash
+# 2. Add steps
 curl -X POST http://localhost:8002/v1/agent-runs/{run_id}/steps \
   -H "Content-Type: application/json" \
-  -d '{"step_type": "read_file", "input": {"path": "utils.py"}}'
-```
+  -d '{"step_type": "read_file", "input": {"path": "main.py"}}'
 
-### 3. Execute
-
-```bash
+# 3. Execute
 curl -X POST http://localhost:8002/v1/agent-runs/{run_id}/execute
-```
 
-### 4. Approve (if needed)
-
-```bash
+# 4. Approve if needed
 curl -X POST http://localhost:8002/v1/agent-runs/{run_id}/steps/{step_id}/approve
 ```
 
-### Or use the Planner
+### Or Use the Planner
 
 ```bash
 curl -X POST http://localhost:8002/v1/plan \
@@ -113,52 +128,31 @@ curl -X POST http://localhost:8002/v1/plan \
   -d '{"goal": "Add factorial function", "workspace_files": ["utils.py"]}'
 ```
 
-## API Docs
-
-Swagger UI available at: http://localhost:8002/docs
-
 ## Project Structure
 
 ```
 src/
 ├── api/           # FastAPI routes and schemas
-├── db/            # SQLAlchemy models
-├── engine/        # Execution engine
+├── db/            # SQLAlchemy models (AgentRun, Step)
+├── engine/        # State machine implementation
 ├── executors/     # Step type handlers
 ├── services/      # Workspace, LLM client, planner
-├── config.py      # Settings
-└── main.py        # Entry point
-```
-
-## Execution Flow
-
-```mermaid
-stateDiagram-v2
-    [*] --> CREATED: Create run
-    CREATED --> PLANNED: Add steps
-    PLANNED --> RUNNING: Execute
-    RUNNING --> RUNNING: Next step
-    RUNNING --> AWAITING_APPROVAL: Dangerous step
-    AWAITING_APPROVAL --> RUNNING: Approved
-    RUNNING --> COMPLETED: All done
-    RUNNING --> FAILED: Error
+└── main.py
 ```
 
 ## Limitations
 
+This is a learning project, not production software:
+
 - No streaming output
 - No rollback/undo
 - Single workspace at a time
-- Basic error handling
-- Minimal test coverage
+- Minimal error handling
+- Basic test coverage
 
-## Dependencies
+## API Documentation
 
-- **FastAPI** - Web framework
-- **SQLAlchemy** - ORM
-- **Pydantic** - Validation
-- **httpx** - HTTP client
-- **Smart Model Router** - LLM gateway
+Swagger UI: http://localhost:8002/docs
 
 ## License
 
